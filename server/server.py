@@ -10,6 +10,7 @@ REST API for the game
 
 from aiohttp import web
 import aiohttp_cors
+import sys
 
 API_PREFIX = '/api'
 
@@ -25,6 +26,13 @@ cors = aiohttp_cors.setup(app, defaults={
         )
 })
 
+async def home_page(request):
+    return web.Response(
+        text='<p>Hello there!</p>',
+        content_type='text/html')
+
+
+cors.add(app.router.add_get(f"", home_page, name='home'))
 
 # game-related routes
 """
@@ -41,4 +49,10 @@ cors.add(app.router.add_get(f"{API_PREFIX}/user/{id}/stats/", get_stats, name='g
 
 
 if __name__ == "__main__":
-    web.run_app(app, port=8080)
+    argv = sys.argv
+    if(len(argv) >= 2):
+        port = argv[1]
+    else:
+        port=8080
+    
+    web.run_app(app, port=1080)
