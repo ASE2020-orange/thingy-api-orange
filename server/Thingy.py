@@ -4,6 +4,7 @@ import signal
 import os
 import asyncio
 import json
+import time
 
 import gmqtt as mqtt
 from dotenv import load_dotenv
@@ -73,7 +74,18 @@ class Thingy:
         msg = '{"appId":"LED","data":{"color":"' + \
             color + '"},"messageType":"CFG_SET"}'
         topic = Thingy.PUB_TOPIC.format(self.device)
-        self.client.publish(topic, msg)
+        self.client.publish(topic, msg, qos=1)
+
+    def _play(self, frequency):
+        msg = '{"appId":"BUZZER","data":{"frequency":' + \
+            str(frequency) + '},"messageType":"CFG_SET"}'
+        topic = Thingy.PUB_TOPIC.format(self.device)
+        self.client.publish(topic, msg, qos=1)
+
+    def play(self, frequency, t):
+        self._play(frequency)
+        time.sleep(t)
+        self._play(0)
 
     def on_disconnect(self, client, packet, exc=None):
         debug(f"{self.device} Disconnected!")
@@ -91,6 +103,7 @@ def example():
     def on_press():
         print("Pressed!")
         thingy.set_color("ffffff")
+        thingy.play(440, 1)
 
     def on_release():
         print("Release!")
@@ -110,6 +123,7 @@ if __name__ == '__main__':
 
     # Get configured thingy example
     thingy = example()
+
     # Create the connection cooroutine
     connection = thingy.create_connection()
 
