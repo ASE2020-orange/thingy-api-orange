@@ -90,11 +90,11 @@ def example():
 
     def on_press():
         print("Pressed!")
-        thingy.set_color("ff0000")
+        thingy.set_color("ffffff")
 
     def on_release():
         print("Release!")
-        thingy.set_color("00ff00")
+        thingy.set_color("000000")
 
     thingy.on_press = on_press
     thingy.on_release = on_release
