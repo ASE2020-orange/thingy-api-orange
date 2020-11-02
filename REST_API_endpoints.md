@@ -8,3 +8,5 @@ Thingy Quizz API Endpoints
 | POST | `/api/games/{id}/join/` | Join a game with a specific ID                   |
 | POST | `/login/`                 | User login                                       |
 | GET  | `/user/{id}/stats`     | Get a player stats (how many games won, etc\.) |
+| GET | `/api/games/{id}/question`| Get question + associated multiple choice answers |
+| POST | `/api/games/{id}/question`| Answer to a question with given answer id |
