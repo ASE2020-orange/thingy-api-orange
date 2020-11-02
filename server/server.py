@@ -41,17 +41,23 @@ async def get_question(request):
             if resp.status == 200:
                 json_response = json.loads(await resp.text())
                 questions = json_response['results']
-                # for now, we only return the first element
+                # for now, we only return the first element, directly from opentriviadb api
+                answers = [questions[0]['correct_answer']] + questions[0]['incorrect_answers']
+                answer_ids = list(range(len(answers)))
                 return web.json_response({
                     'category': questions[0]['category'],
                     'question': questions[0]['question'],
-                    'answers': [questions[0]['correct_answer']]+questions[0]['incorrect_answers']
+                    'answers': [{'answer_id': answer_ids[i], 'answer':answers[i]} for i in range(len(answers))]
                 })
             else:
                 return web.json_response({'error': 'OpenTriviaDB error'}, status=resp.status)
 
+
 async def answer_question(request):
+    game_id = int(request.match_info['id'])
     data = await request.json()
+    if 'answer_id' not in data.keys():
+        return web.json_response({'error': 'You need to specify an answer id'})
     return web.json_response(data)
 
 
