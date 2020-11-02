@@ -57,7 +57,7 @@ async def answer_question(request):
     game_id = int(request.match_info['id'])
     data = await request.json()
     if 'answer_id' not in data.keys():
-        return web.json_response({'error': 'You need to specify an answer id'})
+        return web.json_response({'error': 'You need to specify an answer id'}, status=400)
     return web.json_response(data)
 
 
