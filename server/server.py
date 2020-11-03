@@ -87,8 +87,6 @@ async def websocket_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
-    ws_clients.append(ws)
-
     async for msg in ws:
         if msg.type == WSMsgType.TEXT:
             if msg.data == 'close':
@@ -96,6 +94,8 @@ async def websocket_handler(request):
             elif msg.data.startswith("TO_CLIENT"):
                 for client in ws_clients:
                     await client.send_str(msg.data)
+            else:
+                ws_clients.append(ws)
 
             print(msg.data)
         elif msg.type == WSMsgType.ERROR:
