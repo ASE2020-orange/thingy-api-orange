@@ -12,5 +12,6 @@ Pygments==2.7.1
 typing-extensions==3.7.4.3
 watchgod==0.6
 yarl==1.5.1
+websocket_client==1.15.0
 # Mqtt
 gmqtt>=0.6.7

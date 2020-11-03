@@ -5,7 +5,7 @@ import os
 import asyncio
 import json
 import time
-
+from websocket import create_connection
 import gmqtt as mqtt
 from dotenv import load_dotenv
 
@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEBUG = True
+SERVER_ADRESS = "127.0.0.1:8080"
 
 
 def debug(*a, **b):
@@ -97,17 +98,22 @@ class Thingy:
         Thingy.STOP.set()
 
 
-def example():
-    thingy = Thingy("orange-3")
+def create_thingy(thingy_id):
+    # TODO: each user should have different thingy
+    thingy = Thingy(thingy_id)
 
     def on_press():
         print("Pressed!")
         thingy.set_color("ffffff")
         thingy.play(440, 1)
+        ws = create_connection(f'ws://{SERVER_ADRESS}/ws')
+        ws.send("BUTTON-"+thingy_id)
+        ws.close()
 
     def on_release():
         print("Release!")
         thingy.set_color("000000")
+
 
     thingy.on_press = on_press
     thingy.on_release = on_release
@@ -121,8 +127,8 @@ if __name__ == '__main__':
     loop.add_signal_handler(signal.SIGINT, Thingy.ask_exit)
     loop.add_signal_handler(signal.SIGTERM, Thingy.ask_exit)
 
-    # Get configured thingy example
-    thingy = example()
+    # Get configured thingy
+    thingy =create_thingy("orange-2")
 
     # Create the connection cooroutine
     connection = thingy.create_connection()

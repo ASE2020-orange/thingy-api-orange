@@ -8,10 +8,12 @@ server.py
 REST API for the game
 """
 
-from aiohttp import web, ClientSession
+from aiohttp import web, ClientSession, WSMsgType
 import aiohttp_cors
 import sys
 import json
+
+ws_clients=[]
 
 API_PREFIX = '/api'
 
@@ -42,7 +44,8 @@ async def get_question(request):
                 json_response = json.loads(await resp.text())
                 questions = json_response['results']
                 # for now, we only return the first element, directly from opentriviadb api
-                answers = [questions[0]['correct_answer']] + questions[0]['incorrect_answers']
+                answers = [questions[0]['correct_answer']] + \
+                    questions[0]['incorrect_answers']
                 answer_ids = list(range(len(answers)))
                 return web.json_response({
                     'category': questions[0]['category'],
@@ -60,6 +63,33 @@ async def answer_question(request):
         return web.json_response({'error': 'You need to specify an answer id'}, status=400)
     return web.json_response(data)
 
+
+async def websocket_handler(request):
+
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    ws_clients.append(ws)
+
+    async for msg in ws:
+        if msg.type == WSMsgType.TEXT:
+            if msg.data == 'close':
+                await ws.close()
+            elif msg.data.startswith("BUTTON"):
+                for client in ws_clients:
+                    await client.send_str(msg.data)
+                
+            print(msg.data)
+        elif msg.type == WSMsgType.ERROR:
+            print('ws connection closed with exception %s' %
+                  ws.exception())
+
+    print('websocket connection closed')
+
+    return ws
+
+
+app.add_routes([web.get('/ws', websocket_handler)])
 
 cors.add(app.router.add_get(f"", home_page, name='home'))
 
@@ -88,3 +118,4 @@ if __name__ == "__main__":
         port = 8080
 
     web.run_app(app, port=port)
+
