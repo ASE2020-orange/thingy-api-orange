@@ -35,11 +35,21 @@ class Thingy:
 
     client = None
 
+    # FLIP Enumeration
+    FLIP_NORMAL, FLIP_SIDE, FLIP_UPSIDE_DOWN = 0, 1, 2
+    # Lookup table : Broker flip message to enum
+    _FLIP_DICT = {
+        "NORMAL": FLIP_NORMAL,
+        "ON_SIDE": FLIP_SIDE,
+        "UPSIDE_DOWN": FLIP_UPSIDE_DOWN
+    }
+
     def __init__(self, device):
         self.device = device
         # Callbacks
         self.on_press = lambda *args: None
         self.on_release = lambda *args: None
+        self.on_flip = lambda *args: None
 
     async def create_connection(self):
         self.client = mqtt.Client("")
@@ -69,6 +79,9 @@ class Thingy:
                 self.on_press()
             if data["data"] == "0":
                 self.on_release()
+        elif data["appId"] == "FLIP":
+            if data["data"] in Thingy._FLIP_DICT:
+                self.on_flip(Thingy._FLIP_DICT[data["data"]])
 
     def set_color(self, color):
         msg = '{"appId":"LED","data":{"color":"' + \
@@ -87,6 +100,9 @@ class Thingy:
         time.sleep(t)
         self._play(0)
 
+    def play_set(self, frequency):
+        self._play(frequency)
+
     def on_disconnect(self, client, packet, exc=None):
         debug(f"{self.device} Disconnected!")
 
@@ -97,7 +113,7 @@ class Thingy:
         Thingy.STOP.set()
 
 
-def example():
+def example1():
     thingy = Thingy("orange-3")
 
     def on_press():
@@ -109,8 +125,57 @@ def example():
         print("Release!")
         thingy.set_color("000000")
 
+    def on_flip(orientation):
+        if orientation == Thingy.FLIP_NORMAL:
+            print("I'm normal")
+        elif orientation == Thingy.FLIP_SIDE:
+            print("I'm on the side")
+        elif orientation == Thingy.FLIP_UPSIDE_DOWN:
+            print("I'm upside down")
+
     thingy.on_press = on_press
     thingy.on_release = on_release
+    thingy.on_flip = on_flip
+    return thingy
+
+
+def example2():
+    """
+    Play music with 3 notes:
+    Orientation / notes :
+        - normal : c
+        - side : d
+        - upside down : e
+    """
+    # using a array to have a mutable variable int for the frequency
+    freq = [261]
+
+    thingy = Thingy("orange-3")
+
+    def on_press():
+        print("Pressed!")
+        thingy.set_color("ffffff")
+        thingy.play_set(freq[0])
+
+    def on_release():
+        print("Release!")
+        thingy.set_color("000000")
+        thingy.play_set(0)
+
+    def on_flip(orientation):
+        if orientation == Thingy.FLIP_NORMAL:
+            print("I'm normal")
+            freq[0] = 261  # c4
+        elif orientation == Thingy.FLIP_SIDE:
+            print("I'm on the side")
+            freq[0] = 293  # d4
+        elif orientation == Thingy.FLIP_UPSIDE_DOWN:
+            print("I'm upside down")
+            freq[0] = 329  # e4
+
+    thingy.on_press = on_press
+    thingy.on_release = on_release
+    thingy.on_flip = on_flip
     return thingy
 
 
@@ -122,9 +187,10 @@ if __name__ == '__main__':
     loop.add_signal_handler(signal.SIGTERM, Thingy.ask_exit)
 
     # Get configured thingy example
-    thingy = example()
+    # thingy = example1()
+    thingy = example2()
 
-    # Create the connection cooroutine
+    # Create the connection coroutine
     connection = thingy.create_connection()
 
     loop.run_until_complete(connection)
