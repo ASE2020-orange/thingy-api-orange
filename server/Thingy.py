@@ -142,13 +142,14 @@ def example1():
 def example2():
     """
     Play music with 3 notes:
-    Orientation / notes :
+    Each oriantation is a note :
         - normal : c
         - side : d
         - upside down : e
     """
     # using a array to have a mutable variable int for the frequency
     freq = [261]
+    is_pressed = [False]
 
     thingy = Thingy("orange-3")
 
@@ -156,11 +157,13 @@ def example2():
         print("Pressed!")
         thingy.set_color("ffffff")
         thingy.play_set(freq[0])
+        is_pressed[0] = True
 
     def on_release():
         print("Release!")
         thingy.set_color("000000")
         thingy.play_set(0)
+        is_pressed[0] = False
 
     def on_flip(orientation):
         if orientation == Thingy.FLIP_NORMAL:
@@ -172,6 +175,9 @@ def example2():
         elif orientation == Thingy.FLIP_UPSIDE_DOWN:
             print("I'm upside down")
             freq[0] = 329  # e4
+
+        if is_pressed[0] is True:
+            thingy.play_set(freq[0])
 
     thingy.on_press = on_press
     thingy.on_release = on_release
