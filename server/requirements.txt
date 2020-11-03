@@ -12,3 +12,5 @@ Pygments==2.7.1
 typing-extensions==3.7.4.3
 watchgod==0.6
 yarl==1.5.1
+# Mqtt
+gmqtt>=0.6.7
