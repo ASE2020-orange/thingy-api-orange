@@ -1,5 +1,8 @@
 # README
 
+## DB diagram
+https://dbdiagram.io/d/5fa2c0713a78976d7b7a8403
+
 ## Run
 
 First setup your MQTT Thingy config in the `server/.env`file.
