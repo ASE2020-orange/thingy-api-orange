@@ -6,12 +6,13 @@ attrs==20.2.0
 chardet==3.0.4
 click==7.1.2
 devtools==0.6
+gmqtt==0.6.7
 idna==2.10
 multidict==4.7.6
 Pygments==2.7.1
+python-dotenv==0.15.0
+six==1.15.0
 typing-extensions==3.7.4.3
 watchgod==0.6
+websocket-client==0.57.0
 yarl==1.5.1
-websocket_client==1.15.0
-# Mqtt
-gmqtt>=0.6.7
