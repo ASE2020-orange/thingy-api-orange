@@ -119,6 +119,7 @@ def send_ws(message):
     ws.send(message)
     ws.close()
 
+
 def create_thingy(thingy_id):
     """
     Play music with 3 notes:
@@ -133,7 +134,6 @@ def create_thingy(thingy_id):
     # using a array to have a mutable variable int for the frequency
     freq = [261]
     is_pressed = [False]
-
 
     def on_press():
         print("Pressed!")
@@ -179,7 +179,7 @@ if __name__ == '__main__':
     loop.add_signal_handler(signal.SIGTERM, Thingy.ask_exit)
 
     # Get configured thingy
-    thingy =create_thingy("orange-2")
+    thingy = create_thingy("orange-2")
     # Create the connection coroutine
     connection = thingy.create_connection()
 
