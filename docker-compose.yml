@@ -18,7 +18,7 @@ services:
     depends_on:
       - db
     env_file:
-      - mqtt.env
+      - server/.env
     environment:
       - DB_HOST=db #db is an alias for the ip address of the mysql container
       - DB_PORT=3306

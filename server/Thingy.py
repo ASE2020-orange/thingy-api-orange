@@ -13,7 +13,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEBUG = True
-SERVER_ADRESS = "127.0.0.1:8080"
+SERVER_HOST = "127.0.0.1"
+
+try:
+    SERVER_PORT = int(os.getenv("SERVER_PORT"))
+except:
+    SERVER_PORT = 8080
+
+SERVER_ADRESS = f"{SERVER_HOST}:{SERVER_PORT}"
+THINGY_ID = int(os.getenv("THINGY_ID"))
 
 
 def debug(*a, **b):
@@ -27,6 +35,7 @@ class Thingy:
     MQTT_PORT = int(os.getenv("MQTT_PORT"))
     MQTT_USER = os.getenv("MQTT_USER")
     MQTT_PWD = os.getenv("MQTT_PWD")
+
 
     # Broker endpoints
     SUB_TOPIC = "things/{}/shadow/update"
@@ -179,7 +188,7 @@ if __name__ == '__main__':
     loop.add_signal_handler(signal.SIGTERM, Thingy.ask_exit)
 
     # Get configured thingy
-    thingy =create_thingy("orange-2")
+    thingy =create_thingy(f"orange-{THINGY_ID}")
     # Create the connection coroutine
     connection = thingy.create_connection()
 

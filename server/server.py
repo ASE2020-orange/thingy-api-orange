@@ -12,6 +12,7 @@ from aiohttp import web, ClientSession, WSMsgType
 import aiohttp_cors
 import sys
 import json
+import os
 import random
 
 ws_clients = []
@@ -130,10 +131,9 @@ cors.add(app.router.add_get(f"{API_PREFIX}/user/{id}/stats/", get_stats, name='g
 
 
 if __name__ == "__main__":
-    argv = sys.argv
-    if(len(argv) >= 2):
-        port = argv[1]
-    else:
-        port = 8080
+    try:
+        SERVER_PORT = int(os.getenv("SERVER_PORT"))
+    except:
+        SERVER_PORT = 8080
 
-    web.run_app(app, port=port)
+    web.run_app(app, port=SERVER_PORT)
