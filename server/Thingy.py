@@ -128,6 +128,7 @@ def send_ws(message):
     ws.send(message)
     ws.close()
 
+
 def create_thingy(thingy_id):
     """
     Play music with 3 notes:
@@ -142,7 +143,6 @@ def create_thingy(thingy_id):
     # using a array to have a mutable variable int for the frequency
     freq = [261]
     is_pressed = [False]
-
 
     def on_press():
         print("Pressed!")

@@ -90,16 +90,17 @@ async def websocket_handler(request):
 
     async for msg in ws:
         if msg.type == WSMsgType.TEXT:
+            print(msg.data)
             if msg.data == 'close':
+                ws_clients.remove(ws)
                 await ws.close()
             elif msg.data.startswith("TO_CLIENT"):
                 for client in ws_clients:
                     await client.send_str(msg.data)
-            else:
+            elif msg.data == 'CLIENT_CONNECT':
                 ws_clients.append(ws)
-
-            print(msg.data)
         elif msg.type == WSMsgType.ERROR:
+            ws_clients.remove(ws)
             print('ws connection closed with exception %s' %
                   ws.exception())
 
