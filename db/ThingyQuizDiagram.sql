@@ -13,15 +13,14 @@ CREATE TABLE `quizzes` (
 
 CREATE TABLE `questions` (
   `id` int PRIMARY KEY AUTO_INCREMENT,
-  `title` varchar(255),
-  `question_type` int unsigned
+  `title` varchar(255)
 );
 
 CREATE TABLE `answers` (
   `id` int PRIMARY KEY AUTO_INCREMENT,
   `question_id` int,
   `title` varchar(255),
-  `is_correct` boolean
+  `is_correct` boolean 
 );
 
 CREATE TABLE `quiz_questions` (
