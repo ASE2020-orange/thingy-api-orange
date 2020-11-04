@@ -3,10 +3,10 @@
 ## Run
 
 You need to have docker installed on your machine.
-Then using the a bash interpreter go to the ./server folder.
+Then using the a bash interpreter go to the root folder of the project.
 
-Run the following scripts, in order : 
-- `./build_container.sh` and wait for the container to build
-- `./run_container.sh`
+Run the script `setup.sh` and wait for it to end.
 
-Then you can open your browser on `localhost:1080` and check if you get a response from the server.
+## Stop
+
+Run the command `docker-compose down`.
