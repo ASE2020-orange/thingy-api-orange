@@ -61,6 +61,30 @@ async def answer_question(request):
     return web.json_response(data)
 
 
+async def db_test(request):
+    print("----------- TESTING DB -----------")
+
+    conn = await aiomysql.connect(host='localhost', port=3306, user='root', password='mysql', db='test')
+    print("connection succeed")
+
+    cur = await conn.cursor()
+    print("cursor succeed")
+
+    await cur.execute("SELECT * FROM users")
+    print(cur.description)
+    r = await cur.fetchall()
+    print(r)
+
+    await cur.close()
+
+    conn.close()
+
+    return web.Response(
+        text='<p>Hello there!</p>',
+        content_type='text/html')
+
+
+
 cors.add(app.router.add_get(f"", home_page, name='home'))
 
 # game-related routes
@@ -73,6 +97,12 @@ cors.add(app.router.add_get(
     API_PREFIX+'/games/{id:\d+}/question/', get_question, name='get_question'))
 cors.add(app.router.add_post(
     API_PREFIX+'/games/{id:\d+}/question/', answer_question, name='answer_question'))
+
+# DB TESTING
+cors.add(app.router.add_get(
+    API_PREFIX+'/db/test/', db_test, name='db_test'))
+
+
 # user-related routes
 """
 cors.add(app.router.add_post(f"{API_PREFIX}/login/", user_login, name='user_login'))
