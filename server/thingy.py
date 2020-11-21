@@ -5,7 +5,7 @@ import os
 import asyncio
 import json
 import time
-from websocket import create_connection
+import websocket
 import gmqtt as mqtt
 from dotenv import load_dotenv
 
@@ -13,14 +13,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEBUG = True
-SERVER_HOST = "127.0.0.1"
-
-try:
-    SERVER_PORT = int(os.getenv("SERVER_PORT"))
-except:
-    SERVER_PORT = 8080
-
+SERVER_HOST = os.getenv("SERVER_HOST")
+SERVER_PORT = os.getenv("SERVER_PORT")
 SERVER_ADRESS = f"{SERVER_HOST}:{SERVER_PORT}"
+
 THINGY_ID = int(os.getenv("THINGY_ID"))
 
 
@@ -124,7 +120,7 @@ class Thingy:
 
 
 def send_ws(message):
-    ws = create_connection(f'ws://{SERVER_ADRESS}/ws')
+    ws = websocket.create_connection(f'ws://{SERVER_ADRESS}/ws')
     ws.send(message)
     ws.close()
 
