@@ -34,4 +34,4 @@ if __name__ == '__main__':
     code = input("code:")
     g = get_github(code)
     u = g.get_user()
-    print(u.id, u.avatar_url)
+    print(u.id, u.name, u.avatar_url)
