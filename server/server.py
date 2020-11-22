@@ -11,14 +11,15 @@ import sys
 import json
 import os
 import random
+import base64
+from cryptography import fernet
 
 from aiohttp import web, ClientSession, WSMsgType
-from aiohttp.web import View, json_response
 
 import aiohttp_cors
 from aiohttp_cors import CorsViewMixin
 
-from aiohttp_session import get_session, setup
+from aiohttp_session import setup, get_session
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 
 from dotenv import load_dotenv
@@ -48,18 +49,22 @@ i = 0
 
 async def home_page(request):
     return web.Response(
-        text="<p>Hello there!</p>",
+        text="<p>Hello the</p>",
         content_type="text/html")
 
 
-class AuthView(View, CorsViewMixin):
+class AuthView(web.View, CorsViewMixin):
     async def get(self):
-        output = {"github": github_auth_url}
+        profile = None
 
         session = await get_session(self.request)
         if "profile" in session:
             profile = session["profile"]
-            output["profile"] = profile
+
+        output = {
+            "urls": {"github": github_auth_url},
+            "profile": profile
+        }
 
         return web.json_response(output)
 
@@ -69,16 +74,21 @@ class AuthView(View, CorsViewMixin):
 
         g = await get_github(code)
         if g is None:
-            return json_response({"error": "login error"})
+            return web.json_response({"error": "login error"})
 
         u = g.get_user()
 
         profile = {"avatar_url": u.avatar_url, "name": u.name}
+
         session = await get_session(self.request)
         session["profile"] = profile
 
-        return json_response(profile)
+        output = {
+            "urls": {"github": github_auth_url},
+            "profile": profile
+        }
 
+        return web.json_response(output)
 
 
 async def create_game(request):
@@ -153,7 +163,7 @@ async def websocket_handler(request):
 
 app.add_routes([web.get("/ws", websocket_handler)])
 
-# cors.add(app.router.add_get(f"/", home_page, name="home"))
+cors.add(app.router.add_get(f"/", home_page, name="home"))
 
 cors.add(app.router.add_route("*", "/auth/", AuthView, name="auth"))
 
@@ -174,9 +184,11 @@ cors.add(app.router.add_post(
 cors.add(app.router.add_post(f"/login/", user_login, name="user_login"))
 cors.add(app.router.add_get(f"/user/{id}/stats/", get_stats, name="get_stats"))
 """
-setup(app, EncryptedCookieStorage(b'Thirty  two  length  bytes  key.'))
+
+fernet_key = fernet.Fernet.generate_key()
+secret_key = base64.urlsafe_b64decode(fernet_key)
+setup(app, EncryptedCookieStorage(secret_key))
 
 if __name__ == "__main__":
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
-
     web.run_app(app, port=SERVER_PORT)
