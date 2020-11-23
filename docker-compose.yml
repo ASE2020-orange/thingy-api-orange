@@ -31,3 +31,5 @@ services:
     image: thingy-client-orange:latest
     depends_on:
       - thingy-server
+    ports:
+      - 8080:8080
