@@ -14,7 +14,7 @@ profiles = {}
 
 def get_profile_from_request(request):
     if "Authorization" not in request.headers:
-        print("Authorization header missing")
+        print("Authorization header is missing")
         return None
 
     authorization = request.headers["Authorization"]
@@ -41,8 +41,10 @@ class ProfileView(web.View, CorsViewMixin):
 
         profile = {
             "id": user.id,
-            "avatar_url": user.avatar_url,
             "name": user.name,
+            "avatar_url": user.avatar_url,
+            "location": user.location,
+            "bio": user.bio,
         }
 
         return web.json_response({"profile": profile})
