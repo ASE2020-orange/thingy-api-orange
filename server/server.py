@@ -7,24 +7,17 @@ server.py
 --------------------------------------------------------------------------
 REST API for the game
 """
-import sys
 import json
 import os
 import random
-import base64
-from cryptography import fernet
 
 from aiohttp import web, ClientSession, WSMsgType
 
 import aiohttp_cors
-from aiohttp_cors import CorsViewMixin
-
-from aiohttp_session import setup, get_session
-from aiohttp_session.cookie_storage import EncryptedCookieStorage
 
 from dotenv import load_dotenv
+from views.authentication import ProfileView, OAuthView
 
-from oauth import github_auth_url, get_github
 
 load_dotenv()
 
@@ -51,44 +44,6 @@ async def home_page(request):
     return web.Response(
         text="<p>Hello the</p>",
         content_type="text/html")
-
-
-class AuthView(web.View, CorsViewMixin):
-    async def get(self):
-        profile = None
-
-        session = await get_session(self.request)
-        if "profile" in session:
-            profile = session["profile"]
-
-        output = {
-            "urls": {"github": github_auth_url},
-            "profile": profile
-        }
-
-        return web.json_response(output)
-
-    async def post(self):
-        content = await self.request.json()
-        code = content["code"]
-
-        g = await get_github(code)
-        if g is None:
-            return web.json_response({"error": "login error"})
-
-        u = g.get_user()
-
-        profile = {"avatar_url": u.avatar_url, "name": u.name}
-
-        session = await get_session(self.request)
-        session["profile"] = profile
-
-        output = {
-            "urls": {"github": github_auth_url},
-            "profile": profile
-        }
-
-        return web.json_response(output)
 
 
 async def create_game(request):
@@ -165,7 +120,8 @@ app.add_routes([web.get("/ws", websocket_handler)])
 
 cors.add(app.router.add_get(f"/", home_page, name="home"))
 
-cors.add(app.router.add_route("*", "/auth/", AuthView, name="auth"))
+cors.add(app.router.add_route("*", "/profile/", ProfileView, name="profile"))
+cors.add(app.router.add_route("*", "/oauth/", OAuthView, name="oauth"))
 
 # game-related routes
 cors.add(app.router.add_get("/games/", create_game, name="create_game"))
@@ -184,10 +140,6 @@ cors.add(app.router.add_post(
 cors.add(app.router.add_post(f"/login/", user_login, name="user_login"))
 cors.add(app.router.add_get(f"/user/{id}/stats/", get_stats, name="get_stats"))
 """
-
-fernet_key = fernet.Fernet.generate_key()
-secret_key = base64.urlsafe_b64decode(fernet_key)
-setup(app, EncryptedCookieStorage(secret_key))
 
 if __name__ == "__main__":
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
