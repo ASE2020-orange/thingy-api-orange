@@ -1,6 +1,8 @@
-
+server/.env
 # Created by https://www.toptal.com/developers/gitignore/api/python,web,virtualenv
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,web,virtualenv
+
+mqtt.env
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
