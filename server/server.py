@@ -43,9 +43,18 @@ async def home_page(request):
 
 
 async def create_game(request):
+    req_json = await request.json()
+    tdb_request = 'https://opentdb.com/api.php?amount=10&type=multiple'
+
     game_id = random.randint(1, 42)
     async with ClientSession() as session:
-        async with session.get('https://opentdb.com/api.php?amount=10&type=multiple') as resp:
+        # todo : escape stuff
+        if 'category' in req_json:
+            tdb_request = f"{tdb_request}&category={req_json['category']}"
+        if 'difficulty' in req_json:
+            tdb_request = f"{tdb_request}&difficulty={req_json['difficulty']}"
+            
+        async with session.get(tdb_request) as resp:
             if resp.status == 200:
                 json_response = json.loads(await resp.text())
                 for result in json_response['results']:
@@ -55,6 +64,15 @@ async def create_game(request):
             else:
                 return web.json_response({'error': 'OpenTriviaDB error'}, status=resp.status)
 
+
+async def get_categories(request):
+    async with ClientSession() as session:
+        async with session.get('https://opentdb.com/api_category.php') as resp:
+            if resp.status == 200:
+                json_response = json.loads(await resp.text())
+                return web.json_response(json_response)
+            else:
+                return web.json_response({'error': 'OpenTriviaDB error'}, status=resp.status)
 
 async def get_question(request):
     game_id = int(request.match_info['id'])
@@ -114,12 +132,16 @@ app.add_routes([web.get('/ws', websocket_handler)])
 cors.add(app.router.add_get(f"", home_page, name='home'))
 
 # game-related routes
-cors.add(app.router.add_get(
+cors.add(app.router.add_post(
     f"{API_PREFIX}/games/", create_game, name='create_game'))
 """
+
 cors.add(app.router.add_get(f"{API_PREFIX}/games/", get_games, name='all_games'))
 cors.add(app.router.add_post(f"{API_PREFIX}/games/{id}/join/", join_game, name='join_game'))
 """
+
+cors.add(app.router.add_get(f"{API_PREFIX}/categories/", get_categories, name='get_categories'))
+
 cors.add(app.router.add_get(
     API_PREFIX+'/games/{id:\d+}/question/', get_question, name='get_question'))
 cors.add(app.router.add_post(
