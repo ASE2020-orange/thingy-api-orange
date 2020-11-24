@@ -27,6 +27,7 @@ services:
       - DB_USER=root
       - DB_PASS=
     restart: always
+    hostname: thingy-server
   thingy-client:
     image: thingy-client-orange:latest
     depends_on:

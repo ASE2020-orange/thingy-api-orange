@@ -50,10 +50,8 @@ async def home_page(request):
 
 
 async def game_exists(request):
-    if game_id == -1:
-        return web.json_response({"game_id": game_id})
-    else:
-        return web.json_response({"game_id": game_id})
+    global game_id
+    return web.json_response({"game_id": game_id})
 
 
 async def create_game(request):
@@ -190,4 +188,4 @@ cors.add(app.router.add_get(f"/user/{id}/stats/", get_stats, name="get_stats"))
 
 if __name__ == "__main__":
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
-    web.run_app(app, port=SERVER_PORT)
+    web.run_app(app, port=SERVER_PORT, host="0.0.0.0")
