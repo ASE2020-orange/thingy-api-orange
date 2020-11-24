@@ -64,7 +64,6 @@ async def create_game(request):
         async with session.get(tdb_request) as resp:
             if resp.status == 200:
                 json_response = json.loads(await resp.text())
-                print(json_response)
                 for result in json_response["results"]:
                     questions.append(result)
 
@@ -83,6 +82,7 @@ async def get_categories(request):
                 return web.json_response({'error': 'OpenTriviaDB error'}, status=resp.status)
 
 async def get_question(request):
+    global i
     game_id = int(request.match_info["id"])
     answers = [questions[i]["correct_answer"]] + \
         questions[i]["incorrect_answers"][:-1]
