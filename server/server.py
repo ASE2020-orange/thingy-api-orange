@@ -40,6 +40,7 @@ cors = aiohttp_cors.setup(app, defaults={
 
 questions = []
 i = 0
+game_id = -1
 
 
 async def home_page(request):
@@ -48,25 +49,36 @@ async def home_page(request):
         content_type="text/html")
 
 
+async def game_exists(request):
+    if game_id == -1:
+        return web.json_response({"game_id": game_id})
+    else:
+        return web.json_response({"game_id": game_id})
+
+
 async def create_game(request):
     req_json = await request.json()
     tdb_request = 'https://opentdb.com/api.php?amount=10&type=multiple'
-
+    global game_id
     game_id = random.randint(1, 42)
-    print(game_id)
     async with ClientSession() as session:
         # todo : escape stuff
         if 'category' in req_json:
             tdb_request = f"{tdb_request}&category={req_json['category']}"
         if 'difficulty' in req_json:
             tdb_request = f"{tdb_request}&difficulty={req_json['difficulty']}"
-            
+
         async with session.get(tdb_request) as resp:
+            global i
+            global questions
+            questions = []
+            i = 0
             if resp.status == 200:
                 json_response = json.loads(await resp.text())
                 for result in json_response["results"]:
                     questions.append(result)
-
+                for client in ws_clients:
+                    await client.send_str("TO_CLIENT.GAME_STARTED")
                 return web.json_response({"game_id": game_id})
             else:
                 return web.json_response({"error": "OpenTriviaDB error"}, status=resp.status)
@@ -80,6 +92,7 @@ async def get_categories(request):
                 return web.json_response(json_response)
             else:
                 return web.json_response({'error': 'OpenTriviaDB error'}, status=resp.status)
+
 
 async def get_question(request):
     global i
@@ -102,8 +115,16 @@ async def answer_question(request):
 
     if data["answer_id"] == 0:
         global i
+        global questions
         i += 1
-        i %= 10
+        if i == len(questions):
+            game_id = -1
+            i = 0
+            for client in ws_clients:
+                await client.send_str("TO_CLIENT.GAME_FINISHED")
+        else:
+            for client in ws_clients:
+                await client.send_str("TO_CLIENT.NEXT_QUESTION")
         return web.json_response({"correct": True})
     else:
         return web.json_response({"correct": False})
@@ -143,14 +164,19 @@ cors.add(app.router.add_route("*", "/profile/", ProfileView, name="profile"))
 cors.add(app.router.add_route("*", "/oauth/", OAuthView, name="oauth"))
 
 # game-related routes
-cors.add(app.router.add_post(f"{API_PREFIX}/games/", create_game, name='create_game'))
+cors.add(app.router.add_post(
+    f"{API_PREFIX}/games/", create_game, name='create_game'))
+
+cors.add(app.router.add_get(
+    f"{API_PREFIX}/games/", game_exists, name='game_exists'))
 
 """
 cors.add(app.router.add_get(f"{API_PREFIX}/games/", get_games, name='all_games'))
 cors.add(app.router.add_post(f"{API_PREFIX}/games/{id}/join/", join_game, name='join_game'))
 """
 
-cors.add(app.router.add_get(f"{API_PREFIX}/categories/", get_categories, name='get_categories'))
+cors.add(app.router.add_get(
+    f"{API_PREFIX}/categories/", get_categories, name='get_categories'))
 
 cors.add(app.router.add_get(
     API_PREFIX+'/games/{id:\d+}/question/', get_question, name='get_question'))

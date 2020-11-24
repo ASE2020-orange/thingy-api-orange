@@ -141,29 +141,29 @@ def create_thingy(thingy_id):
     is_pressed = [False]
 
     def on_press():
-        print("Pressed!")
+        print(f"Thingy-{thingy_id}: Pressed!")
         thingy.set_color("ffffff")
         thingy.play_set(freq[0])
         is_pressed[0] = True
         send_ws("TO_CLIENT.BUTTON."+thingy_id)
 
     def on_release():
-        print("Release!")
+        print(f"Thingy-{thingy_id}: Release!")
         thingy.set_color("000000")
         thingy.play_set(0)
         is_pressed[0] = False
 
     def on_flip(orientation):
         if orientation == Thingy.FLIP_NORMAL:
-            print("I'm normal")
+            print(f"Thingy-{thingy_id}: I'm normal")
             freq[0] = 261  # c4
             send_ws("TO_CLIENT.FLIP_A."+thingy_id)
         elif orientation == Thingy.FLIP_SIDE:
-            print("I'm on the side")
+            print(f"Thingy-{thingy_id}: I'm on the side")
             freq[0] = 293  # d4
             send_ws("TO_CLIENT.FLIP_B."+thingy_id)
         elif orientation == Thingy.FLIP_UPSIDE_DOWN:
-            print("I'm upside down")
+            print(f"Thingy-{thingy_id}: I'm upside down")
             freq[0] = 329  # e4
             send_ws("TO_CLIENT.FLIP_C."+thingy_id)
 
@@ -183,9 +183,12 @@ if __name__ == '__main__':
     loop.add_signal_handler(signal.SIGINT, Thingy.ask_exit)
     loop.add_signal_handler(signal.SIGTERM, Thingy.ask_exit)
 
-    # Get configured thingy
-    thingy =create_thingy(f"orange-{THINGY_ID}")
-    # Create the connection coroutine
-    connection = thingy.create_connection()
+    for i in range(1,4):
+        # Get configured thingy
+        thingy =create_thingy(f"orange-{i}")
+        # Create the connection coroutine
+        connection = thingy.create_connection()
+        loop.create_task(connection)
 
-    loop.run_until_complete(connection)
+    
+    loop.run_forever()

@@ -41,7 +41,7 @@ class ProfileView(web.View, CorsViewMixin):
 
         profile = {
             "id": user.id,
-            "name": user.name,
+            "name": user.login,
             "avatar_url": user.avatar_url,
             "location": user.location,
             "bio": user.bio,
