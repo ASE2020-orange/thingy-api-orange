@@ -16,3 +16,5 @@ typing-extensions==3.7.4.3
 watchgod==0.6
 websocket-client==0.57.0
 yarl==1.5.1
+PyGithub>=1.53
+requests>=2.22.0
