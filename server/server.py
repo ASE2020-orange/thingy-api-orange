@@ -45,7 +45,7 @@ game_id = -1
 
 async def home_page(request):
     return web.Response(
-        text="<p>Hello the</p>",
+        text="<p>Hello there</p>",
         content_type="text/html")
 
 
@@ -98,6 +98,7 @@ async def get_question(request):
     answers = [questions[i]["correct_answer"]] + \
         questions[i]["incorrect_answers"][:-1]
     answer_ids = list(range(len(answers)))
+
     return web.json_response({
         "category": questions[i]["category"],
         "question": questions[i]["question"],
