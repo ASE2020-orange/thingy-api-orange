@@ -188,5 +188,8 @@ cors.add(app.router.add_get(f"/user/{id}/stats/", get_stats, name="get_stats"))
 """
 
 if __name__ == "__main__":
-    SERVER_PORT = int(os.getenv("SERVER_PORT"))
+    try:
+        SERVER_PORT = int(os.getenv("SERVER_PORT"))
+    except ValueError:
+        SERVER_PORT = 1080
     web.run_app(app, port=SERVER_PORT, host="0.0.0.0")
