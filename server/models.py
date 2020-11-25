@@ -32,9 +32,35 @@ class Questions(Model):
 
 class Answers(Model):
     id = fields.IntField(pk=True)
-    question_id = fields.IntField()
+    question = fields.ForeignKeyField('models.Questions', related_name='question')
     title = fields.CharField(255)
     is_correct = fields.BooleanField()
 
     def __str__(self):
-        return f"Answer {self.id}: {self.question_id}, {self.title}, {self.is_correct}"
+        return f"Answer {self.id}: {self.question.id}, {self.title}, {self.is_correct}"
+
+
+class UserQuizzes(Model):
+    user = fields.ForeignKeyField('models.Users', related_name='user_quizzes')
+    quiz = fields.ForeignKeyField('models.Quizzes', related_name='user_quizzes')
+
+    def __str__(self):
+        return f"UserQuizz user : {self.user.id}, quiz : {self.quiz.id}"
+
+
+class UserAnswers(Model):
+    user = fields.ForeignKeyField('models.Users', related_name='user_answers')
+    quiz = fields.ForeignKeyField('models.Quizzes', related_name='user_answers')
+    answer = fields.ForeignKeyField('models.Answers', related_name='user_answers')
+    answer_delay = fields.IntField()
+
+    def __str__(self):
+        return f"UserAnswers user : {self.user.id}, quiz : {self.quiz.id}, answer : {self.answer.id}, {answer_delay}"
+
+
+class QuizQuestions(Model):
+    quiz = fields.ForeignKeyField('models.Quizzes', related_name='quiz_questions')
+    question = fields.ForeignKeyField('models.Questions', related_name='quiz_questions')
+
+    def __str__(self):
+        return f"QuizQuestions quiz : {self.quiz.id}, question : {self.question.id}"

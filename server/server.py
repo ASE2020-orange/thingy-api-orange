@@ -17,6 +17,8 @@ import aiohttp_cors
 
 from dotenv import load_dotenv
 from views.authentication import ProfileView, OAuthView
+from mysql_orm import MysqlOrm
+from models import *
 
 
 API_PREFIX = '/api'
@@ -137,31 +139,33 @@ async def websocket_handler(request):
 
 app.add_routes([web.get("/ws", websocket_handler)])
 
-async def db_test(request):
-    print("----------- TESTING DB -----------")
 
-    conn = await aiomysql.connect(host='localhost', port=3306, user='root', password='mysql', db='test')
-    print("connection succeed")
+async def create_user(request):
+    data = await request.json()
 
-    cur = await conn.cursor()
-    print("cursor succeed")
+    mysql_orm = await MysqlOrm.get_instance()
 
-    await cur.execute("SELECT * FROM users")
-    print(cur.description)
-    r = await cur.fetchall()
-    print(r)
+    await mysql_orm.create_user(data['user_oauth_token'])
 
-    await cur.close()
-
-    conn.close()
-
-    return web.Response(
-        text='<p>Hello there!</p>',
-        content_type='text/html')
+    return web.json_response({'id': -1})
 
 
+async def get_user(request):
+    id = int(request.match_info['id'])
+    print(id)
 
-cors.add(app.router.add_get(f"", home_page, name='home'))
+    mysql_orm = await MysqlOrm.get_instance()
+
+    user = await mysql_orm.get_user_by_id(id)
+
+    if len(user) == 0:
+        return web.json_response({'id': -1})
+    else:
+        user = user[0]
+        return web.json_response(vars(user))
+
+
+
 cors.add(app.router.add_get("/", home_page, name="home"))
 
 cors.add(app.router.add_route("*", "/profile/", ProfileView, name="profile"))
@@ -182,10 +186,9 @@ cors.add(app.router.add_get(
 cors.add(app.router.add_post(
     API_PREFIX+'/games/{id:\d+}/question/', answer_question, name='answer_question'))
 
-# DB TESTING
-cors.add(app.router.add_get(
-    API_PREFIX+'/db/test/', db_test, name='db_test'))
-
+# DB related routes
+cors.add(app.router.add_post('/users/', create_user, name='create_user'))
+cors.add(app.router.add_get('/users/{id:\d+}', get_user, name='get_user'))
 
 # user-related routes
 """

@@ -15,7 +15,7 @@ class MysqlOrm:
 
             # TODO read these from config file
             await Tortoise.init(
-                db_url='mysql://root:mysql@localhost:3306/thingy_quizz',
+                db_url='mysql://root:mysql@localhost:3306/test',
                 modules={'models': ['models']}
             )
 
@@ -34,14 +34,21 @@ class MysqlOrm:
         await Tortoise.close_connections()
 
 
-    async def create_user(self):
-        user = Users(user_oauth_token='python')
+    async def create_user(self, user_oauth_token):
+        user = Users(user_oauth_token=user_oauth_token)
         await user.save()
+        return user
 
 
-    async def create_quiz(self):
-        quiz = Quizzes(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category="category")
+    async def create_quiz(self, date, difficulty, quiz_type, quiz_category):
+        quiz = Quizzes(date=date, difficulty=difficulty, quiz_type=quiz_type, quiz_category=quiz_category)
         await quiz.save()
+        return quiz
+
+
+    async def create_user_quiz(self, user, quiz):
+        user_quiz = UserQuizzes(user=user, quiz=quiz)
+        await user_quiz.save()
 
 
     async def create_question(self):
@@ -90,13 +97,26 @@ class MysqlOrm:
 async def test():
     mysql_orm = await MysqlOrm.get_instance()
 
-    get_all_test = await mysql_orm.get_all_users()
-    for elem in get_all_test:
-        print(elem)
+    # user = await mysql_orm.create_user(user_oauth_token="test_auth")
+    user = await mysql_orm.get_user_by_id(11)
+    user = user[0]
+    print("our user : ", user)
 
-    get_by_id_test = await mysql_orm.get_answer_by_id(1)
-    for elem in get_by_id_test:
-        print(elem)
+    # quiz = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category="category")
+    quiz = await mysql_orm.get_quiz_by_id(6)
+    quiz = quiz[0]
+    print("our quiz linked to the user : ", quiz)
+
+    # await mysql_orm.create_user_quiz(user=user, quiz=quiz)
+    # await SomeModel.create(tournament_id=the_tournament.pk) on peut aussi créer un model juste avec la ref FK
+
+    user_user_quizzes = await user.user_quizzes.all()
+    print("all the user_quizzes we find for this user : ", user_user_quizzes)
+
+    for user_quizzes in user_user_quizzes:
+        await user_quizzes.fetch_related('quiz')
+        quiz_ = user_quizzes.quiz
+        print("Quiz linked to the user got from user_quizzes : ", quiz_)
 
     await mysql_orm.close()
 
