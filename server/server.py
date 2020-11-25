@@ -10,6 +10,7 @@ REST API for the game
 import json
 import os
 import random
+from datetime import datetime
 
 from aiohttp import web, ClientSession, WSMsgType
 
@@ -41,6 +42,8 @@ cors = aiohttp_cors.setup(app, defaults={
 questions = []
 i = 0
 game_id = -1
+previous_question_time = -1
+
 
 
 async def home_page(request):
@@ -94,6 +97,17 @@ async def get_categories(request):
 
 async def get_question(request):
     global i
+    global previous_question_time
+
+    if previous_question_time != -1:
+        current_question_time = datetime.now()
+        elapsed = current_question_time - previous_question_time
+        previous_question_time = current_question_time
+
+        if elapsed.seconds >= 10:
+            i += 1
+    else:
+        previous_question_time = datetime.now()
     game_id = int(request.match_info["id"])
     answers = [questions[i]["correct_answer"]] + \
         questions[i]["incorrect_answers"][:-1]
