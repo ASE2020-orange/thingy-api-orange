@@ -180,8 +180,8 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
 
     # Set the signal to release the connection when closing the program
-   # loop.add_signal_handler(signal.SIGINT, Thingy.ask_exit)
-   # loop.add_signal_handler(signal.SIGTERM, Thingy.ask_exit)
+    loop.add_signal_handler(signal.SIGINT, Thingy.ask_exit)
+    loop.add_signal_handler(signal.SIGTERM, Thingy.ask_exit)
 
     for i in range(1,4):
         # Get configured thingy
