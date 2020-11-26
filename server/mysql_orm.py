@@ -46,19 +46,26 @@ class MysqlOrm:
         return quiz
 
 
+    async def create_answer(self, question, title, is_correct):
+        answer = Answers(question=question, title=title, is_correct=is_correct)
+        await answer.save()
+        return answer
+
+
+    async def create_question(self, title):
+        question = Questions(title=title)
+        await question.save()
+        return question
+
+
     async def create_user_quiz(self, user, quiz):
         user_quiz = UserQuizzes(user=user, quiz=quiz)
         await user_quiz.save()
 
 
-    async def create_question(self):
-        question = Questions(title="title", question_type=1)
-        await question.save()
-
-
-    async def create_answer(self):
-        answer = Answers(title="title", question_id=1, is_correct=True)
-        await answer.save()
+    async def create_user_answers(self, user, quiz, answer, answer_delay):
+        user_answer = UserAnswers(user=user, quiz=quiz, answer=answer, answer_delay=answer_delay)
+        await user_answer.save()
 
 
     async def get_all_users(self):
@@ -93,21 +100,36 @@ class MysqlOrm:
         return await Answers.filter(id=id)
 
 
+    async def get_answers_of_user(self, user_id):
+        answers = []
+
+        user = await self.get_user_by_id(user_id)
+        user = user[0]
+
+        user_user_answers = await user.user_answers.all()
+        for user_user_answer in user_user_answers:
+            await user_user_answer.fetch_related('answer')
+            answer_of_user = user_user_answer.answer
+            answers.append(answer_of_user)
+
+        return answers
+
 
 async def test():
     mysql_orm = await MysqlOrm.get_instance()
 
     # user = await mysql_orm.create_user(user_oauth_token="test_auth")
-    user = await mysql_orm.get_user_by_id(11)
+    user = await mysql_orm.get_user_by_id(1)
     user = user[0]
     print("our user : ", user)
 
     # quiz = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category="category")
-    quiz = await mysql_orm.get_quiz_by_id(6)
+    quiz = await mysql_orm.get_quiz_by_id(1)
     quiz = quiz[0]
     print("our quiz linked to the user : ", quiz)
 
-    # await mysql_orm.create_user_quiz(user=user, quiz=quiz)
+    await mysql_orm.create_user_quiz(user=user, quiz=quiz)
+
     # await SomeModel.create(tournament_id=the_tournament.pk) on peut aussi créer un model juste avec la ref FK
 
     user_user_quizzes = await user.user_quizzes.all()
@@ -121,6 +143,27 @@ async def test():
     await mysql_orm.close()
 
 
+async def test2():
+    mysql_orm = await MysqlOrm.get_instance()
+
+    user = await mysql_orm.get_user_by_id(1)
+    user = user[0]
+
+    quiz = await mysql_orm.get_quiz_by_id(1)
+    quiz = quiz[0]
+
+    question = await mysql_orm.create_question(title="title")
+
+    answer_correct = await mysql_orm.create_answer(question=question, title="title", is_correct=True)
+    answer_not_correct = await mysql_orm.create_answer(question=question, title="title", is_correct=False)
+
+    await mysql_orm.create_user_answers(user=user, quiz=quiz, answer=answer_correct, answer_delay=0)
+
+
+async def populate():
+    pass
+
+
 
 if __name__ == "__main__":
-    run_async(test())
+    run_async(test_get_all_answers_for_users())

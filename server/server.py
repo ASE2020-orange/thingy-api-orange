@@ -145,9 +145,9 @@ async def create_user(request):
 
     mysql_orm = await MysqlOrm.get_instance()
 
-    await mysql_orm.create_user(data['user_oauth_token'])
+    user = await mysql_orm.create_user(data['user_oauth_token'])
 
-    return web.json_response({'id': -1})
+    return web.json_response(vars(user))
 
 
 async def get_user(request):
@@ -163,6 +163,18 @@ async def get_user(request):
     else:
         user = user[0]
         return web.json_response(vars(user))
+
+
+async def get_user_answer(request):
+    user_id = int(request.match_info['id'])
+
+    mysql_orm = await MysqlOrm.get_instance()
+
+    user_answers = await mysql_orm.get_answers_of_user(user_id)
+
+    return web.json_response({"nb_answers": len(user_answers), "answers": [vars(user_answer) for user_answer in user_answers]})
+
+
 
 
 
@@ -188,7 +200,9 @@ cors.add(app.router.add_post(
 
 # DB related routes
 cors.add(app.router.add_post('/users/', create_user, name='create_user'))
-cors.add(app.router.add_get('/users/{id:\d+}', get_user, name='get_user'))
+cors.add(app.router.add_get('/users/{id:\d+}/', get_user, name='get_user'))
+cors.add(app.router.add_get('/answers/users/{id:\d+}', get_user_answer, name='get_user_answer'))
+
 
 # user-related routes
 """
