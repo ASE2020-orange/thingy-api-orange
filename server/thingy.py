@@ -6,6 +6,8 @@ import asyncio
 import json
 import time
 import websocket
+import websockets
+import sfx
 import gmqtt as mqtt
 from dotenv import load_dotenv
 
@@ -30,8 +32,6 @@ class ThingyLowLevel:
     SUB_TOPIC = "things/{}/shadow/update"
     PUB_TOPIC = "things/{}/shadow/update/accepted"
 
-    client = None
-
     # FLIP Enumeration
     FLIP_NORMAL, FLIP_SIDE, FLIP_UPSIDE_DOWN = 0, 1, 2
     # Lookup table : Broker flip message to enum
@@ -44,10 +44,6 @@ class ThingyLowLevel:
     def __init__(self, device, debug=False):
         self.device = device
         self.debug = debug
-        # Callbacks
-        # self.on_press = lambda *args: None
-        # self.on_release = lambda *args: None
-        # self.on_flip = lambda *args: None
 
     async def create_connection(self):
         self.client = mqtt.Client("")
@@ -68,7 +64,7 @@ class ThingyLowLevel:
     def on_connect(self, client, flags, rc, properties):
         self.print(f"{self.device} Connected!")
         topic = self.SUB_TOPIC.format(self.device)
-        client.subscribe(topic, qos=0)
+        self.client.subscribe(topic, qos=0)
 
     def on_message(self, client, topic, payload, qos, properties):
         # self.print(f"RECV MSG: {payload}")
@@ -116,11 +112,38 @@ class ThingyLowLevel:
         ThingyLowLevel.STOP.set()
 
 
+
 class Thingy(ThingyLowLevel):
 
-    def __init__(self, device, debug=False):
+    async def ws_message(self):
+        try:
+            async with websockets.connect(self.uri) as ws:
+                await ws.send(f"THINGY_CONNECT." + self.device)
+                async for message in ws:
+                    if message == "CORRECT":
+                        self.set_color("00ff00")
+                        sfx.songs[message](self.play)
+                    if message == "INCORRECT":
+                        self.set_color("ff0000")
+                        sfx.songs[message](self.play)
+                    if message == "VICTORY":
+                        self.set_color("00ff00")
+                        sfx.songs[message](self.play)
+                    if message == "DEFEAT":
+                        self.set_color("ff0000")
+                        sfx.songs[message](self.play)
+                    self.set_color("000000")
+
+
+        except websockets.ConnectionClosedError:
+            pass
+
+
+    def __init__(self, device, loop, debug=False):
         super().__init__(device, debug)
-        self.ws = websocket.create_connection(f'ws://{SERVER_ADRESS}/ws')
+        self.uri = f"ws://{SERVER_ADRESS}/ws"
+        self.ws = websocket.create_connection(self.uri)
+        task = loop.create_task(self.ws_message())
 
     def on_press(self):
         print(f"{self.device} Pressed!")
@@ -144,7 +167,6 @@ class Thingy(ThingyLowLevel):
         print(f"{self.device} close !")
         self.ws.close()
 
-
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
 
@@ -152,11 +174,12 @@ if __name__ == '__main__':
     loop.add_signal_handler(signal.SIGINT, Thingy.ask_exit)
     loop.add_signal_handler(signal.SIGTERM, Thingy.ask_exit)
 
-    for i in range(1, 4):
+    for i in range(1, 4)[::-1]:
         # Get configured thingy
-        thingy = Thingy(f"orange-{i}", debug=True)
+        thingy = Thingy(f"orange-{i}", loop, debug=True)
         # Create the connection coroutine
         connection = thingy.create_connection()
         task = loop.create_task(connection)
+        # break
 
     loop.run_until_complete(task)

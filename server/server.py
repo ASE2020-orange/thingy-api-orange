@@ -25,6 +25,7 @@ API_PREFIX = '/api'
 load_dotenv()
 
 ws_clients = []
+ws_thingy = {}
 
 app = web.Application()
 
@@ -126,7 +127,14 @@ async def answer_question(request):
     if "answer_id" not in data.keys():
         return web.json_response({"error": "You need to specify an answer id"}, status=400)
 
+    print(data)
+    if data["thingy_id"] not in ws_thingy:
+        return web.json_response({"error": "You need to specify a correct thingy ID"}, status=400)
+
+    ws = ws_thingy[data["thingy_id"]]
+
     if data["answer_id"] == 0:
+        await ws.send_str("CORRECT")
         global i
         global questions
         i += 1
@@ -134,12 +142,16 @@ async def answer_question(request):
             game_id = -1
             i = 0
             for client in ws_clients:
+                # todo send defeat to the thingy of people that didn't win
+                await ws.send_str("VICTORY")
+                # await ws.send_str("DEFEAT")
                 await client.send_str("TO_CLIENT.GAME_FINISHED")
         else:
             for client in ws_clients:
                 await client.send_str("TO_CLIENT.NEXT_QUESTION")
         return web.json_response({"correct": True})
     else:
+        await ws.send_str("INCORRECT")
         return web.json_response({"correct": False})
 
 
@@ -159,8 +171,13 @@ async def websocket_handler(request):
                     await client.send_str(msg.data)
             elif msg.data == "CLIENT_CONNECT":
                 ws_clients.append(ws)
+            elif msg.data.split(".")[0] == "THINGY_CONNECT":
+                ws_thingy[int(msg.data[-1])] = ws
         elif msg.type == WSMsgType.ERROR:
-            ws_clients.remove(ws)
+            if ws in ws_clients:
+                ws_clients.remove(ws)
+            if ws in ws_thingy:
+                ws_thingy.remove(ws)
             print("ws connection closed with exception %s" %
                   ws.exception())
 
