@@ -120,6 +120,7 @@ class Thingy(ThingyLowLevel):
             async with websockets.connect(self.uri) as ws:
                 await ws.send(f"THINGY_CONNECT." + self.device)
                 async for message in ws:
+                    print(message)
                     if message == "CORRECT":
                         self.set_color("00ff00")
                         sfx.songs[message](self.play)
@@ -133,8 +134,6 @@ class Thingy(ThingyLowLevel):
                         self.set_color("ff0000")
                         sfx.songs[message](self.play)
                     self.set_color("000000")
-
-
         except websockets.ConnectionClosedError:
             pass
 
@@ -171,8 +170,11 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
 
     # Set the signal to release the connection when closing the program
-    loop.add_signal_handler(signal.SIGINT, Thingy.ask_exit)
-    loop.add_signal_handler(signal.SIGTERM, Thingy.ask_exit)
+    try:
+        loop.add_signal_handler(signal.SIGINT, Thingy.ask_exit)
+        loop.add_signal_handler(signal.SIGTERM, Thingy.ask_exit)
+    except NotImplementedError:
+        print("Couldn't initalize exit signals")
 
     for i in range(1, 4)[::-1]:
         # Get configured thingy

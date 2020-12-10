@@ -18,3 +18,4 @@ websocket-client==0.57.0
 yarl==1.5.1
 PyGithub>=1.53
 requests>=2.22.0
+websockets>=8.1
