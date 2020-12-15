@@ -90,19 +90,22 @@ class MysqlOrm:
 
 
     async def get_user_by_id(self, id):
-        return await Users.filter(id=id)
+        return await Users.filter(id=id).get()
+    
+    async def get_user_by_oauth_id(self, id):
+        return await Users.filter(user_oauth_token=id).get()
 
 
     async def get_quiz_by_id(self, id):
-        return await Quizzes.filter(id=id)
+        return await Quizzes.filter(id=id).get()
 
 
     async def get_question_by_id(self, id):
-        return await Questions.filter(id=id)
+        return await Questions.filter(id=id).get()
 
 
     async def get_answer_by_id(self, id):
-        return await Answers.filter(id=id)
+        return await Answers.filter(id=id).get()
 
 
     async def get_answers_of_user(self, user_id):
@@ -118,6 +121,9 @@ class MysqlOrm:
             answers.append(answer_of_user)
 
         return answers
+
+    async def get_answers_of_question(self, question_id):
+        return await Answers.filter(question=await self.get_question_by_id(question_id))
 
 
 async def test():

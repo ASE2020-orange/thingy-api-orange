@@ -6,6 +6,8 @@ from aiohttp_cors import CorsViewMixin
 
 from oauth import github_auth_url, get_github
 
+from mysql_orm import MysqlOrm
+import os
 
 key = secrets.token_urlsafe(64)
 
@@ -68,12 +70,25 @@ class OAuthView(web.View, CorsViewMixin):
             {"id": user.id}, key, algorithm="HS256").decode("utf-8")
         profiles[user.id] = user
 
+        mysql_orm = await MysqlOrm.get_instance(os.getenv("MYSQL_USER"),
+                                                     os.getenv(
+                                                         "MYSQL_PASSWORD"),
+                                                     os.getenv("MYSQL_HOST"),
+                                                     int(os.getenv(
+                                                         "MYSQL_PORT")),
+                                                     os.getenv("MYSQL_DATABASE"))
+
+        user_db = await mysql_orm.get_user_by_oauth_id(user.id)
+
+        if not user_db:
+            await mysql_orm.create_user(user.id)
+
         return web.json_response({"jwt": encoded_jwt})
 
     async def delete(self):
         user = get_profile_from_request(self.request)
         if user is None:
             return web.Response(status=401)
-        print("delete", user)
+        print("delete from global var", user)
         del profiles[user.id]
         return web.json_response({})
