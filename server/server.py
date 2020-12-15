@@ -53,7 +53,13 @@ answers = []
 
 
 loop = asyncio.get_event_loop()
-conn = loop.run_until_complete(MysqlOrm.get_instance('root', 'mysql', 'localhost', 3306, 'test'))
+conn = loop.run_until_complete(MysqlOrm.get_instance(os.getenv("MYSQL_USER"),
+                                                     os.getenv(
+                                                         "MYSQL_PASSWORD"),
+                                                     os.getenv("MYSQL_HOST"),
+                                                     int(os.getenv(
+                                                         "MYSQL_PORT")),
+                                                     os.getenv("MYSQL_DATABASE")))
 
 
 async def home_page(request):
@@ -67,13 +73,16 @@ async def game_exists(request):
     return web.json_response({"game_id": game_id})
 
 
+difficulty_int_map = {'easy': 0, 'medium': 1, 'hard': 2}
+
+
 async def create_game(request):
     global game_id
     global quiz
 
     req_json = await request.json()
     tdb_request = 'https://opentdb.com/api.php?amount=10&type=multiple'
-    
+
     game_id = random.randint(1, 42)
     async with ClientSession() as session:
         # todo : escape stuff
@@ -87,7 +96,7 @@ async def create_game(request):
             difficulty = req_json['difficulty']
 
         tdb_request = f"{tdb_request}&category={category}&difficulty={difficulty}"
-        quiz = await conn.create_quiz(date=datetime.now(), difficulty=difficulty, quiz_type='multiple', quiz_category=category)
+        quiz = await conn.create_quiz(date=datetime.now(), difficulty=difficulty_int_map[difficulty], quiz_type='multiple', quiz_category=category)
 
         async with session.get(tdb_request) as resp:
             global i
@@ -177,7 +186,6 @@ async def answer_question(request):
         answer_delay = (datetime.now() - previous_question_time).timestamp()
         answer = answers[i][data['answer_id']]
         await conn.create_user_answers(user, quiz, answer, answer_delay)
-
 
     if data["answer_id"] == 0:
         await ws.send_str("CORRECT")
@@ -277,9 +285,6 @@ async def get_user_answer(request):
     return web.json_response({"nb_answers": len(user_answers), "answers": [vars(user_answer) for user_answer in user_answers]})
 
 
-
-
-
 cors.add(app.router.add_get("/", home_page, name="home"))
 
 cors.add(app.router.add_route("*", "/profile/", ProfileView, name="profile"))
@@ -308,7 +313,8 @@ cors.add(app.router.add_post(
 # DB related routes
 cors.add(app.router.add_post('/users/', create_user, name='create_user'))
 cors.add(app.router.add_get('/users/{id:\d+}/', get_user, name='get_user'))
-cors.add(app.router.add_get('/answers/users/{id:\d+}', get_user_answer, name='get_user_answer'))
+cors.add(app.router.add_get(
+    '/answers/users/{id:\d+}', get_user_answer, name='get_user_answer'))
 
 
 # user-related routes

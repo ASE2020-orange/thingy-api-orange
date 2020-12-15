@@ -2,11 +2,8 @@ version: '3'
 services:
   db:
     image: mysql/mysql-server:5.7
-    environment:
-      - MYSQL_USER=root
-      - MYSQL_PASSWORD=
-      - MYSQL_ROOT_PASSWORD=
-      - MYSQL_DATABASE=mysql
+    env_file:
+      - server/.env
     restart: always
     ports:
       - 33006:3306
@@ -21,16 +18,14 @@ services:
     env_file:
       - server/.env
     environment:
-      - DB_HOST=db #db is an alias for the ip address of the mysql container
-      - DB_PORT=3306
-      - DB_DBNAME=mysql
-      - DB_USER=root
-      - DB_PASS=
+      - MYSQL_HOST=db
+      - SERVER_HOST=thingy-server
     restart: always
     hostname: thingy-server
   thingy-client:
     image: thingy-client-orange:latest
     depends_on:
       - thingy-server
+    restart: always
     ports:
       - 8080:8080
