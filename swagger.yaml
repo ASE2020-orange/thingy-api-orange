@@ -255,31 +255,3 @@ paths:
                     name:
                       type: string
                       description: "Category title"
-  /users/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        type: integer
-    get:
-      tags:
-        - "users"
-      produces:
-        - "application/json"
-      responses:
-        "200":
-          description: ""
-  /answers/users/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        type: integer
-    get:
-      tags:
-        - "users"
-      produces:
-        - "application/json"
-      responses:
-        "200":
-          description: ""
