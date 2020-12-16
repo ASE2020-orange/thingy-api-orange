@@ -5,6 +5,7 @@ from tortoise import fields
 class Users(Model):
     id = fields.IntField(pk=True)
     user_oauth_token = fields.CharField(255)
+    score = fields.IntField()
     quizzes = fields.ManyToManyField('models.Quizzes', related_name='users')
     answers = fields.ManyToManyField('models.Answers', related_name='users')
 

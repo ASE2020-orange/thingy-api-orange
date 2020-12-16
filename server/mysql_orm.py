@@ -45,7 +45,7 @@ class MysqlOrm:
 
 
     async def create_user(self, user_oauth_token):
-        user = Users(user_oauth_token=user_oauth_token)
+        user = Users(user_oauth_token=user_oauth_token, score=0)
         await user.save()
         return user
 
@@ -161,6 +161,16 @@ class MysqlOrm:
         return answers
 
 
+    async def user_add_score(self, user_id, score):
+        user = await self.get_user_by_id(user_id)
+
+        user.score += score
+
+        await user.save()
+
+        return score
+
+
 async def test():
     mysql_orm = await MysqlOrm.get_instance()
 
@@ -256,10 +266,21 @@ async def test_m2m_methods():
     print(question1_quizzes)
 
 
+async def test_user_add_score():
+        mysql_orm = await MysqlOrm.get_instance()
+
+        user = await mysql_orm.create_user(user_oauth_token="test_auth1")
+
+        score = await mysql_orm.user_add_score(user.id, 5)
+
+        print(score)
+
+
+
 async def populate():
     pass
 
 
 
 if __name__ == "__main__":
-    run_async(test_m2m_methods())
+    run_async(test_user_add_score())
