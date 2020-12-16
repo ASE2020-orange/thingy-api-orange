@@ -1,5 +1,8 @@
 # README
 
+## .env file
+do not forget to set the `.env` file based on `.env.sample`
+
 ## DB diagram
 https://dbdiagram.io/d/5fa2c0713a78976d7b7a8403
 
