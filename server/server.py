@@ -53,8 +53,14 @@ conn = loop.run_until_complete(MysqlOrm.get_instance())
 
 
 async def home_page(request):
+    text = """
+    <p>
+        Welcome to Thingy API, more informations on
+        <a href='https://github.com/ASE2020-orange'>https://github.com/ASE2020-orange</a>
+    </p>
+    """
     return web.Response(
-        text="<p>Hello there</p>",
+        text=text,
         content_type="text/html")
 
 

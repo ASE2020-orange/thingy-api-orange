@@ -1,0 +1,142 @@
+swagger: "2.0"
+info:
+  description: "Thingy Quizz is a project for the course : advanced software engineering in the BeNeFri cursus. It was realized during the semester 2020A"
+  version: "1.0.0"
+  title: "Thingy Quizz"
+host: "51.15.194.171:8080"
+basePath: "/api"
+tags:
+- name: "hello"
+  description: "Test that everything is okay"
+- name: "profile"
+  description: "Profile of a connected user"
+- name: "oauth"
+  description: "Route used for the OAuth authentication"
+- name: "games"
+  description: "Informations related to the state of a game"
+- name: "categories"
+  description: "Categories for a game"
+- name: "users"
+  description: "Users route"
+schemes:
+- "http"
+paths:
+  /:
+    get:
+      tags:
+      - "hello"
+      produces:
+      - "application/html"
+      responses:
+        "200":
+          description: ""
+  /profile/:
+    get:
+      tags:
+      - "profile"
+      produces:
+      - "application/json"
+      responses:
+        "200":
+          description: ""
+  /oauth/:
+    get:
+      tags:
+      - "oauth"
+      produces:
+      - "application/json"
+      responses:
+        "200":
+          description: ""
+    post:
+      tags:
+      - "oauth"
+      produces:
+      - "application/json"
+      responses:
+        "200":
+          description: ""
+    delete:
+      tags:
+      - "oauth"
+      produces:
+      - "application/json"
+      responses:
+        "200":
+          description: ""
+  /games/:
+    get:
+      tags:
+      - "games"
+      produces:
+      - "application/json"
+      responses:
+        "200":
+          description: ""
+    post:
+      tags:
+      - "games"
+      produces:
+      - "application/json"
+      responses:
+        "200":
+          description: ""
+  /games/{id}/question/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+    get:
+      tags:
+        - "games"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: ""
+    post:
+      tags:
+      - "games"
+      produces:
+      - "application/json"
+      responses:
+        "200":
+          description: ""
+  /categories/:
+    get:
+      tags:
+        - "categories"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: ""
+  /users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+    get:
+      tags:
+        - "users"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: ""
+  /answers/users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+    get:
+      tags:
+        - "users"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: ""
