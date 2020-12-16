@@ -1,14 +1,13 @@
 # README
 
 ## .env file
-do not forget to set the `.env` file based on `.env.sample`
-
+Copy the `.env.sample` file at the root of the server folder and name it `.env`, fill up your parameters.
 ## DB diagram
 https://dbdiagram.io/d/5fa2c0713a78976d7b7a8403
 
 ## Run
 
-First setup your MQTT Thingy config in the `server/.env`file.
+You need to have your MQTT Thingy setup with the config in the `server/.env`file.
 
 You need to have docker installed on your machine.
 
@@ -18,7 +17,7 @@ Then build the client container in the thingy-client-orange root folder: `docker
 
 Then using the a bash interpreter go to the root folder of the thingy-api-orange project.
 
-Run the script `run_services.sh` and wait for it to end.
+Run the command `docker-compose up` or `docker-compose up --build` if you never built the containers and wait for it to end.
 
 ## Stop
 
