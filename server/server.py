@@ -147,7 +147,6 @@ async def get_question(request):
         previous_question_time = datetime.now()
     try:
         question = (await conn.get_questions_of_quiz(quiz.id))[question_count]
-        question_count += 1
 
         incorrect_count = 0
         answers = []
