@@ -19,7 +19,6 @@ class Quizzes(Model):
     quiz_type = fields.CharField(255)
     quiz_category = fields.IntField()
     questions = fields.ManyToManyField('models.Questions', related_name='quizzes')
-    #users = fields.ManyToManyField('models.Users', related_name='quizzes')
 
     def __str__(self):
         return f"Quiz {self.id}: {self.date}, {self.difficulty}, {self.quiz_type}, {self.quiz_category}"
@@ -28,7 +27,6 @@ class Quizzes(Model):
 class Questions(Model):
     id = fields.IntField(pk=True)
     title = fields.CharField(255)
-    #quizzes = fields.ManyToManyField('models.Quizzes', related_name='questions')
 
     def __str__(self):
         return f"Question {self.id}: {self.title}"
@@ -39,7 +37,6 @@ class Answers(Model):
     question = fields.ForeignKeyField('models.Questions', related_name='answers')
     title = fields.CharField(255)
     is_correct = fields.BooleanField()
-    #users = fields.ManyToManyField('models.Users', related_name='answers')
 
     def __str__(self):
         return f"Answer {self.id}: {self.question_id}, {self.title}, {self.is_correct}"
