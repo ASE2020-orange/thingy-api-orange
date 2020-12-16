@@ -1,3 +1,14 @@
+"""
+ThingyQuizz API
+Orange team : Goloviatinski Sergiy, Herbelin Ludovic, Margueron Raphaël, Vorpe Fabien
+Advanced Software Engineering Course, MCS 2020
+
+tests.py
+--------------------------------------------------------------------------
+Unit test class for the ThingyQuiz API
+Sends requests to the open trivia DB and checks for correct status of the data received
+"""
+
 import aiounittest
 import unittest
 import json

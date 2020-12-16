@@ -1,3 +1,14 @@
+"""
+ThingyQuizz API
+Orange team : Goloviatinski Sergiy, Herbelin Ludovic, Margueron Raphaël, Vorpe Fabien
+Advanced Software Engineering Course, MCS 2020
+
+sfx.py
+--------------------------------------------------------------------------
+This is a helper module to play sounds on the thingy
+Defines the notes and mini-songs for the game (EG victory theme)
+"""
+
 import time
 
 

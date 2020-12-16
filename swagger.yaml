@@ -20,6 +20,32 @@ tags:
   description: "Users route"
 schemes:
 - "http"
+
+securityDefinitions:
+  OAuth2:
+    type: oauth2
+    flow: accessCode
+    authorizationUrl: "http://51.15.194.171:8080/oauth"
+    tokenUrl: "http://51.15.194.171:8080/oauth" 
+    scopes:
+      login: Grants access to profile, save in DB using user_id, etc.
+definitions:
+  UserProfile:
+    type: object
+    properties:
+      id:
+        type: integer
+        description: The user's ID.
+      name:
+        type: string
+        description: The user name.
+      avatar_url:
+        type: string
+        description: The user's avatar's url.
+      location:
+        type: string
+        description: The user's living location.
+        
 paths:
   /:
     get:
@@ -32,6 +58,8 @@ paths:
           description: ""
   /profile/:
     get:
+      security:
+        - OAuth2: [login]
       tags:
       - "profile"
       produces:
@@ -39,6 +67,8 @@ paths:
       responses:
         "200":
           description: ""
+          schema:
+            $ref: '#/definitions/UserProfile'
   /oauth/:
     get:
       tags:
@@ -48,15 +78,43 @@ paths:
       responses:
         "200":
           description: ""
+          schema:
+            type: object
+            properties:
+              urls:
+                type: string
+                description: Github authentication URL
     post:
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: code
+          description: The user's github code to login
+          required: true
+          schema:
+            type: string
       tags:
       - "oauth"
       produces:
       - "application/json"
       responses:
+        "401":
+          description: "Login error"
         "200":
-          description: ""
+          description: "Sucessfully logged in"
+          schema:
+            type: object
+            properties:
+              jwt:
+                type: string
+                description: "User's JWT to send back for next requests"
+              score:
+                type: integer
+                description: "The user's score"
     delete:
+      security:
+        - OAuth2: [login]
       tags:
       - "oauth"
       produces:
@@ -73,14 +131,45 @@ paths:
       responses:
         "200":
           description: ""
+          schema:
+            type: object
+            properties:
+              game_id:
+                type: integer
+                description: "The game's ID if existing or -1"
     post:
       tags:
       - "games"
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: game
+          schema:
+            type: object
+            properties:
+              category:
+                type: integer
+                description: "Open Trivia DB category ID"
+              difficulty:
+                type: string
+                description: "Open Trivia DB Difficulty label"
+            
+         
       produces:
       - "application/json"
       responses:
+        "500":
+          description: "OpenTriviaDB Error"
         "200":
-          description: ""
+          description: "Game was created"
+          schema:
+            type: object
+            properties:
+              game_id:
+                type: integer
+                description: "The game's ID if existing or -1"
+
   /games/{id}/question/:
     parameters:
       - name: id
@@ -95,7 +184,42 @@ paths:
       responses:
         "200":
           description: ""
+          schema:
+            type: object
+            properties:
+              category:
+                type: integer
+                description: "The quiz's category ID"
+              question:
+                type: string
+                description: "The question's title"
+              answers:
+                type: object
+                properties:
+                  answer_id:
+                    type: integer
+                    description: "The answer's id"
+                  answer:
+                    type: string
+                    description: "The answer's title"
+                  
     post:
+      security:
+        - OAuth2: [login]
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: data
+          schema:
+            type: object
+            properties:
+              thingy_id:
+                type: integer
+                description: "User's thingy ID"
+              answer_id:
+                type: integer
+                description: "User's answer ID"
       tags:
       - "games"
       produces:
@@ -103,6 +227,17 @@ paths:
       responses:
         "200":
           description: ""
+          schema:
+            type: object
+            properties:
+              correct:
+                type: boolean
+                description: "Answer is correct or not"
+                
+              score:
+                type: integer
+                description: "The user's score"
+          
   /categories/:
     get:
       tags:
@@ -112,6 +247,21 @@ paths:
       responses:
         "200":
           description: ""
+          schema:
+            type: object
+            properties:
+              trivia_categories:
+                type: array
+                description: "Array of open trivia DB categories name and IDs"
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: "Category ID"
+                    name:
+                      type: string
+                      description: "Category title"
   /users/{id}:
     parameters:
       - name: id

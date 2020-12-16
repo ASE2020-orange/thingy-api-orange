@@ -25,6 +25,9 @@ import asyncio
 
 API_PREFIX = '/api'
 
+SCORE_CORRECT = 5
+SCORE_INCORRECT = -5
+
 load_dotenv()
 
 ws_clients = []
@@ -163,7 +166,7 @@ async def get_question(request):
             "answers": [{"answer_id": answer.id, "answer": answer.title} for answer in answers]
         })
     # either question_count is too high for the number of question, or quiz = -1 because game is finished
-    except (IndexError,AttributeError):
+    except (IndexError, AttributeError):
         for client in ws_clients:
             # await ws.send_str("DEFEAT")
             await client.send_str("TO_CLIENT.GAME_FINISHED")
@@ -189,13 +192,17 @@ async def answer_question(request):
 
     ws = ws_thingy[data["thingy_id"]]
     answer = await conn.get_answer_by_id(data['answer_id'])
-    if(user_id != -1):
+    if user_id != -1:
         user = await conn.get_user_by_oauth_id(user_id)
         answer_delay = (datetime.now() -
                         previous_question_time).total_seconds()
         await conn.create_user_answers(user, quiz, answer, answer_delay)
 
     if answer.is_correct:
+        if user_id == -1:
+            newscore = 0
+        else:
+            newscore = await conn.user_add_score(user.id, SCORE_CORRECT)
         await ws.send_str("CORRECT")
 
         global question_count
@@ -213,10 +220,14 @@ async def answer_question(request):
                 # await ws.send_str("DEFEAT")
                 await client.send_str("TO_CLIENT.GAME_FINISHED")
 
-        return web.json_response({"correct": True})
+        return web.json_response({"correct": True, "score": newscore})
     else:
+        if user_id == -1:
+            newscore = 0
+        else:
+            newscore = await conn.user_add_score(user.id, SCORE_INCORRECT)
         await ws.send_str("INCORRECT")
-        return web.json_response({"correct": False})
+        return web.json_response({"correct": False, "score": newscore})
 
 
 async def websocket_handler(request):
@@ -282,7 +293,6 @@ async def get_stats(request):
 app.add_routes([web.get("/ws", websocket_handler)])
 
 
-
 cors.add(app.router.add_get("/", home_page, name="home"))
 
 cors.add(app.router.add_route(
@@ -308,7 +318,6 @@ cors.add(app.router.add_get(
     API_PREFIX+'/games/{id:\d+}/question/', get_question, name='get_question'))
 cors.add(app.router.add_post(
     API_PREFIX+'/games/{id:\d+}/question/', answer_question, name='answer_question'))
-
 
 
 # user-related routes
