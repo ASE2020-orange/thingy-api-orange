@@ -3,6 +3,10 @@ from tortoise import Tortoise, run_async
 from models import *
 import datetime
 import os
+from dotenv import load_dotenv
+
+# Load the .env into the environement
+load_dotenv()
 
 
 class MysqlOrm:
@@ -157,7 +161,7 @@ async def test():
     user = user[0]
     print("our user : ", user)
 
-    quiz = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category="category")
+    quiz = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=1)
     quiz = await mysql_orm.get_quiz_by_id(1)
     quiz = quiz[0]
     print("our quiz linked to the user : ", quiz)
@@ -194,10 +198,39 @@ async def test2():
     await mysql_orm.create_user_answers(user=user, quiz=quiz, answer=answer_correct, answer_delay=0)
 
 
+async def test_m2m_fields():
+    mysql_orm = await MysqlOrm.get_instance()
+
+    user1 = await mysql_orm.create_user(user_oauth_token="test_auth1")
+    user2 = await mysql_orm.create_user(user_oauth_token="test_auth2")
+    user3 = await mysql_orm.create_user(user_oauth_token="test_auth3")
+
+    quiz1 = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=1)
+    quiz2 = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=2)
+    quiz3 = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=3)
+
+    user1_quizzes = await user1.quizzes.all()
+    print(user1_quizzes)
+
+    quiz1_users = await quiz1.users.all()
+    print(quiz1_users)
+
+    await user1.quizzes.add(quiz1)
+    await user1.quizzes.add(quiz2)
+    await quiz1.users.add(user3
+    )
+
+    user1_quizzes = await user1.quizzes.all()
+    print(user1_quizzes)
+
+    quiz1_users = await quiz1.users.all()
+    print(quiz1_users)
+
+
 async def populate():
     pass
 
 
 
 if __name__ == "__main__":
-    run_async(test())
+    run_async(test_m2m_fields())
