@@ -23,7 +23,6 @@ from mysql_orm import MysqlOrm
 from models import *
 import asyncio
 
-
 API_PREFIX = '/api'
 
 load_dotenv()
@@ -189,9 +188,7 @@ async def answer_question(request):
     answer = await conn.get_answer_by_id(data['answer_id'])
     if(user_id != -1):
         user = await conn.get_user_by_oauth_id(user_id)
-        #answer_delay = (datetime.now() - previous_question_time).timestamp()
-        #TODO: FIXME
-        answer_delay = 42
+        answer_delay = (datetime.now() - previous_question_time).total_seconds()
         await conn.create_user_answers(user, quiz, answer, answer_delay)
 
     if answer.is_correct:
@@ -309,6 +306,7 @@ cors.add(app.router.add_get(f"/user/{id}/stats/", get_stats, name="get_stats"))
 """
 
 if __name__ == "__main__":
+
     try:
         SERVER_PORT = int(os.getenv("SERVER_PORT"))
     except ValueError:
