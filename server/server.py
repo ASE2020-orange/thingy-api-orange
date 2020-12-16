@@ -109,7 +109,7 @@ async def create_game(request):
                         await conn.create_answer(question, result['correct_answer'], is_correct=True)
 
                     await conn.add_m2m_quiz_question(quiz, question)
-                    
+
                 for client in ws_clients:
                     await client.send_str("TO_CLIENT.GAME_STARTED")
 
@@ -250,14 +250,45 @@ async def websocket_handler(request):
     return ws
 
 
+async def get_stats(request):
+    oauth_id = int(request.match_info['oauth_id'])
+
+    mysql_orm = await MysqlOrm.get_instance()
+
+    user = await mysql_orm.get_user_by_oauth_id(oauth_id)
+
+    quizzes = await mysql_orm.get_quizzes_of_user(user.id)
+    nb_quizzes = len(quizzes)
+
+    answers = await mysql_orm.get_answers_of_user(user.id)
+    nb_answers = len(answers)
+    nb_correct_answers = len([answer for answer in answers if answer.is_correct])
+    nb_wrong_answers = len([answer for answer in answers if not answer.is_correct])
+    percent_of_correct_answer = int(nb_correct_answers / nb_answers * 100)
+
+    user_user_answers = await mysql_orm.get_user_user_answers(user.id)
+    avg_reaction_time = sum([user_answer.answer_delay for user_answer in
+                             user_user_answers]) / len(user_user_answers)
+
+    return web.json_response(
+        {"nb_quizzes": nb_quizzes, "nb_answers": nb_answers,
+         "nb_correct_answers": nb_correct_answers,
+         "nb_wrong_answers": nb_wrong_answers,
+         "percent_of_correct_answer": percent_of_correct_answer,
+         "avg_reaction_time": avg_reaction_time}
+    )
+
+
 app.add_routes([web.get("/ws", websocket_handler)])
 
 
 
 cors.add(app.router.add_get("/", home_page, name="home"))
 
-cors.add(app.router.add_route("*", "/profile/", ProfileView, name="profile"))
-cors.add(app.router.add_route("*", "/oauth/", OAuthView, name="oauth"))
+cors.add(app.router.add_route(
+    "*", API_PREFIX+"/profile/", ProfileView, name="profile"))
+cors.add(app.router.add_route(
+    "*", API_PREFIX+"/oauth/", OAuthView, name="oauth"))
 
 # game-related routes
 cors.add(app.router.add_post(
@@ -273,7 +304,6 @@ cors.add(app.router.add_post(f"{API_PREFIX}/games/{id}/join/", join_game, name='
 
 cors.add(app.router.add_get(
     f"{API_PREFIX}/categories/", get_categories, name='get_categories'))
-
 cors.add(app.router.add_get(
     API_PREFIX+'/games/{id:\d+}/question/', get_question, name='get_question'))
 cors.add(app.router.add_post(
@@ -284,8 +314,10 @@ cors.add(app.router.add_post(
 # user-related routes
 """
 cors.add(app.router.add_post(f"/login/", user_login, name="user_login"))
-cors.add(app.router.add_get(f"/user/{id}/stats/", get_stats, name="get_stats"))
 """
+cors.add(app.router.add_get(
+    API_PREFIX+"/user/{oauth_id:\d+}/stats/", get_stats, name="get_stats"))
+
 
 if __name__ == "__main__":
 

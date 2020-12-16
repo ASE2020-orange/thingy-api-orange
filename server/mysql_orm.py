@@ -61,12 +61,6 @@ class MysqlOrm:
         await answer.save()
         return answer
 
-    async def create_quiz_question(self, quiz, question):
-        quiz_question = QuizQuestions(quiz=quiz, question=question)
-        await quiz_question.save()
-        return quiz_question
-
-
     async def create_question(self, title):
         question = Questions(title=title)
         await question.save()
@@ -75,10 +69,6 @@ class MysqlOrm:
 
     async def add_m2m_user_quiz(self, user, quiz):
         await user.quizzes.add(quiz)
-
-
-    async def add_m2m_user_answer(self, user, answer):
-        await user.answers.add(quiz)
 
 
     async def add_m2m_quiz_question(self, quiz, question):
@@ -96,6 +86,7 @@ class MysqlOrm:
 
     async def get_all_quizzes(self):
         return await Quizzes.all()
+
 
     async def get_question_by_title(self,title):
         try:
@@ -123,6 +114,7 @@ class MysqlOrm:
         except tortoise.exceptions.DoesNotExist:
             return None
 
+
     async def get_quiz_by_id(self, id):
         return await Quizzes.filter(id=id).get()
 
@@ -143,12 +135,24 @@ class MysqlOrm:
         return questions
 
 
-    async def get_answers_of_user(self, user_id):
-        # answers = []
-
+    async def get_quizzes_of_user(self, user_id):
         user = await self.get_user_by_id(user_id)
 
-        answers = await user.answers.all()
+        quizzes = await user.quizzes.all()
+
+        return quizzes
+
+
+    async def get_answers_of_user(self, user_id):
+        user = await self.get_user_by_id(user_id)
+
+        user_user_answers = await user.user_answers.all()
+
+        answers = []
+        for user_answer in user_user_answers:
+            await user_answer.fetch_related('answer')
+            answer = user_answer.answer
+            answers.append(answer)
 
         return answers
 
@@ -161,6 +165,14 @@ class MysqlOrm:
         return answers
 
 
+    async def get_user_user_answers(self, user_id):
+        user = await self.get_user_by_id(user_id)
+
+        user_user_answers = await user.user_answers.all()
+
+        return user_user_answers
+
+
     async def user_add_score(self, user_id, score):
         user = await self.get_user_by_id(user_id)
 
@@ -169,118 +181,3 @@ class MysqlOrm:
         await user.save()
 
         return score
-
-
-async def test():
-    mysql_orm = await MysqlOrm.get_instance()
-
-    user = await mysql_orm.create_user(user_oauth_token="test_auth")
-    user = await mysql_orm.get_user_by_id(1)
-    print("our user : ", user)
-
-    quiz = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=1)
-    quiz = await mysql_orm.get_quiz_by_id(1)
-    print("our quiz linked to the user : ", quiz)
-
-    await mysql_orm.create_user_quiz(user=user, quiz=quiz)
-
-    # await SomeModel.create(tournament_id=the_tournament.pk) on peut aussi créer un model juste avec la ref FK
-
-    user_user_quizzes = await user.user_quizzes.all()
-    print("all the user_quizzes we find for this user : ", user_user_quizzes)
-
-    for user_quizzes in user_user_quizzes:
-        await user_quizzes.fetch_related('quiz')
-        quiz_ = user_quizzes.quiz
-        print("Quiz linked to the user got from user_quizzes : ", quiz_)
-
-    await mysql_orm.close()
-
-
-async def test2():
-    mysql_orm = await MysqlOrm.get_instance()
-
-    user = await mysql_orm.get_user_by_id(1)
-
-    quiz = await mysql_orm.get_quiz_by_id(1)
-
-    question = await mysql_orm.create_question(title="title")
-
-    answer_correct = await mysql_orm.create_answer(question=question, title="title", is_correct=True)
-    answer_not_correct = await mysql_orm.create_answer(question=question, title="title", is_correct=False)
-
-    await mysql_orm.create_user_answers(user=user, quiz=quiz, answer=answer_correct, answer_delay=0)
-
-
-async def test_m2m_fields():
-    mysql_orm = await MysqlOrm.get_instance()
-
-    user1 = await mysql_orm.create_user(user_oauth_token="test_auth1")
-    user2 = await mysql_orm.create_user(user_oauth_token="test_auth2")
-    user3 = await mysql_orm.create_user(user_oauth_token="test_auth3")
-
-    quiz1 = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=1)
-    quiz2 = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=2)
-    quiz3 = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=3)
-
-    user1_quizzes = await user1.quizzes.all()
-    print(user1_quizzes)
-
-    quiz1_users = await quiz1.users.all()
-    print(quiz1_users)
-
-    await user1.quizzes.add(quiz1)
-    await user1.quizzes.add(quiz2)
-    await quiz1.users.add(user3)
-
-    user1_quizzes = await user1.quizzes.all()
-    print(user1_quizzes)
-
-    quiz1_users = await quiz1.users.all()
-    print(quiz1_users)
-
-
-async def test_m2m_methods():
-    mysql_orm = await MysqlOrm.get_instance()
-
-    question1 = await mysql_orm.create_question(title="question1")
-    question2 = await mysql_orm.create_question(title="question2")
-    question3 = await mysql_orm.create_question(title="question3")
-
-    quiz1 = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=1)
-    quiz2 = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=2)
-    quiz3 = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=3)
-
-    quiz1_questions = await quiz1.questions.all()
-    print(quiz1_questions)
-
-    question1_quizzes = await question1.quizzes.all()
-    print(question1_quizzes)
-
-    await mysql_orm.add_m2m_quiz_question(quiz1, question1)
-
-    quiz1_questions = await quiz1.questions.all()
-    print(quiz1_questions)
-
-    question1_quizzes = await question1.quizzes.all()
-    print(question1_quizzes)
-
-
-async def test_user_add_score():
-        mysql_orm = await MysqlOrm.get_instance()
-
-        user = await mysql_orm.create_user(user_oauth_token="test_auth1")
-
-        score = await mysql_orm.user_add_score(user.id, 5)
-
-        print(score)
-
-
-
-async def populate():
-    pass
-
-
-
-if __name__ == "__main__":
-    run_async(test_user_add_score())
