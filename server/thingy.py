@@ -1,3 +1,13 @@
+"""
+ThingyQuiz API
+Orange team : Goloviatinski Sergiy, Herbelin Ludovic, Margueron Raphaël, Vorpe Fabien
+Advanced Software Engineering Course, MCS 2020
+
+thingy.py
+--------------------------------------------------------------------------
+Thingy connection and communication modules for the ThingyQuiz project
+"""
+
 #!/usr/bin/env python
 
 import signal
@@ -19,6 +29,10 @@ SERVER_PORT = os.getenv("SERVER_PORT")
 SERVER_ADRESS = f"{SERVER_HOST}:{SERVER_PORT}"
 
 
+"""
+This class is a lower level representation of the thingy operations
+It contains operations for connecting, sending messages, play sounds etc.
+"""
 class ThingyLowLevel:
     # MQTT Config from the environement variable
     MQTT_HOST = os.getenv("MQTT_HOST")
@@ -113,6 +127,9 @@ class ThingyLowLevel:
 
 
 
+"""
+This class is a higher level implementation of the thingy operations
+"""
 class Thingy(ThingyLowLevel):
 
     async def ws_message(self):

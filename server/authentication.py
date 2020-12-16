@@ -1,3 +1,13 @@
+"""
+ThingyQuizz API
+Orange team : Goloviatinski Sergiy, Herbelin Ludovic, Margueron Raphaël, Vorpe Fabien
+Advanced Software Engineering Course, MCS 2020
+
+authentication.py
+--------------------------------------------------------------------------
+Helper module to handle the user's authentication using OAuth2 (Github)
+"""
+
 import secrets
 import jwt
 
@@ -13,7 +23,10 @@ key = secrets.token_urlsafe(64)
 
 profiles = {}
 
-
+"""
+Helper to decode the profile from the data passed in the request
+Needs to contan authorization and JWT
+"""
 def get_profile_from_request(request):
     if "Authorization" not in request.headers:
         print("Authorization header is missing")
