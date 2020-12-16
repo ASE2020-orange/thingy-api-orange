@@ -28,7 +28,7 @@ def ff7_victory_fanfare(play):
     note("c5", noir * 3, blank_time, play)
 
 def smb_game_over(play):
-    noir = 60.0 / 120.0 # 100 bpm
+    noir = 60.0 / 120.0 # 120 bpm
     blank_time = noir / 9
     note("c5", noir, noir / 2, play)
     note("g4", noir / 2, noir, play)

@@ -70,14 +70,7 @@ class OAuthView(web.View, CorsViewMixin):
             {"id": user.id}, key, algorithm="HS256").decode("utf-8")
         profiles[user.id] = user
 
-        mysql_orm = await MysqlOrm.get_instance(os.getenv("MYSQL_USER"),
-                                                     os.getenv(
-                                                         "MYSQL_PASSWORD"),
-                                                     os.getenv("MYSQL_HOST"),
-                                                     int(os.getenv(
-                                                         "MYSQL_PORT")),
-                                                     os.getenv("MYSQL_DATABASE"))
-
+        mysql_orm = await MysqlOrm.get_instance()
         user_db = await mysql_orm.get_user_by_oauth_id(user.id)
 
         if not user_db:

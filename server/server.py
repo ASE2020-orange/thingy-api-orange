@@ -50,13 +50,7 @@ actual_question_id = -1
 
 
 loop = asyncio.get_event_loop()
-conn = loop.run_until_complete(MysqlOrm.get_instance(os.getenv("MYSQL_USER"),
-                                                     os.getenv(
-                                                         "MYSQL_PASSWORD"),
-                                                     os.getenv("MYSQL_HOST"),
-                                                     int(os.getenv(
-                                                         "MYSQL_PORT")),
-                                                     os.getenv("MYSQL_DATABASE")))
+conn = loop.run_until_complete(MysqlOrm.get_instance())
 
 
 async def home_page(request):

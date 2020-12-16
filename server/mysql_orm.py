@@ -1,33 +1,39 @@
+import tortoise
 from tortoise import Tortoise, run_async
 from models import *
 import datetime
+import os
 
 
 class MysqlOrm:
-    get_instance_used = False
     instance = None
 
+    def __init__(self):
+        if self.instance is not None:
+            raise Exception("This class is a singleton, use the get_instance method !")
+
     @staticmethod
-    async def get_instance(user, pwd, host, port, db):
-        if MysqlOrm.instance == None:
-            MysqlOrm.get_instance_used = True
-            MysqlOrm()
+    async def get_instance():
+        if MysqlOrm.instance is None:
+            MysqlOrm.instance = MysqlOrm()
+            await MysqlOrm.create_instance()
 
-            # TODO read these from config file
-            await Tortoise.init(
-                db_url=f'mysql://{user}:{pwd}@{host}:{port}/{db}',
-                modules={'models': ['models']}
-            )
-
-            await Tortoise.generate_schemas()
         return MysqlOrm.instance
 
+    @staticmethod
+    async def create_instance():
+        user = os.getenv("MYSQL_USER")
+        pwd = os.getenv("MYSQL_PASSWORD")
+        host = os.getenv("MYSQL_HOST")
+        port = int(os.getenv("MYSQL_PORT"))
+        db = os.getenv("MYSQL_DATABASE")
 
-    def __init__(self):
-       if MysqlOrm.get_instance_used == False or MysqlOrm.instance != None:
-          raise Exception("This class is a singleton, use the get_instance method !")
-       else:
-          MysqlOrm.instance = self
+        await Tortoise.init(
+          db_url=f'mysql://{user}:{pwd}@{host}:{port}/{db}',
+          modules={'models': ['models']}
+        )
+
+        await Tortoise.generate_schemas()
 
 
     async def close(self):
@@ -91,9 +97,13 @@ class MysqlOrm:
 
     async def get_user_by_id(self, id):
         return await Users.filter(id=id).get()
-    
+
     async def get_user_by_oauth_id(self, id):
-        return await Users.filter(user_oauth_token=id).get()
+        try:
+            return await Users.filter(user_oauth_token=id).get()
+        except tortoise.exceptions.DoesNotExist:
+            return None
+
 
 
     async def get_quiz_by_id(self, id):
@@ -127,7 +137,7 @@ class MysqlOrm:
 
 
 async def test():
-    mysql_orm = await MysqlOrm.get_instance('root','mysql', 'localhost', 3306, 'test')
+    mysql_orm = await MysqlOrm.get_instance()
 
     user = await mysql_orm.create_user(user_oauth_token="test_auth")
     user = await mysql_orm.get_user_by_id(1)
