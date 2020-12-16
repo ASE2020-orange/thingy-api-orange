@@ -22,10 +22,10 @@ services:
       - SERVER_HOST=thingy-server
     restart: always
     hostname: thingy-server
-  # thingy-client:
-  #   image: thingy-client-orange:latest
-  #   depends_on:
-  #     - thingy-server
-  #   restart: always
-  #   ports:
-  #     - 8080:8080
+  thingy-client:
+    image: thingy-client-orange:latest
+    depends_on:
+      - thingy-server
+    restart: always
+    ports:
+      - 8080:8080

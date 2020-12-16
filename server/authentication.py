@@ -74,9 +74,9 @@ class OAuthView(web.View, CorsViewMixin):
         user_db = await mysql_orm.get_user_by_oauth_id(user.id)
 
         if not user_db:
-            await mysql_orm.create_user(user.id)
+            user_db = await mysql_orm.create_user(user.id)
 
-        return web.json_response({"jwt": encoded_jwt})
+        return web.json_response({"jwt": encoded_jwt,"score":user_db.score})
 
     async def delete(self):
         user = get_profile_from_request(self.request)
