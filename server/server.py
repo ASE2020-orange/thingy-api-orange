@@ -45,7 +45,7 @@ cors = aiohttp_cors.setup(app, defaults={
 
 previous_question_time = -1
 quiz = -1
-actual_question_id = -1
+question_count = 0
 
 
 loop = asyncio.get_event_loop()
@@ -77,6 +77,7 @@ difficulty_int_map = {'easy': 0, 'medium': 1, 'hard': 2}
 
 async def create_game(request):
     global quiz
+    global question_count
 
     req_json = await request.json()
     tdb_request = 'https://opentdb.com/api.php?amount=10&type=multiple'
@@ -94,27 +95,21 @@ async def create_game(request):
 
         tdb_request = f"{tdb_request}&category={category}&difficulty={difficulty}"
         quiz = await conn.create_quiz(date=datetime.now(), difficulty=difficulty_int_map[difficulty], quiz_type='multiple', quiz_category=category)
-
+        question_count = 0
         async with session.get(tdb_request) as resp:
-            global actual_question_id
-            questions = []
             if resp.status == 200:
                 json_response = json.loads(await resp.text())
                 i = 0
                 for result in json_response["results"]:
-                    questions.append(result)
-                    question = await conn.create_question(result['question'])
-                    if i == 0:
-                        actual_question_id = question.id
-                    i += 1
+                    question = await conn.get_question_by_title(result['question'])
+                    if not question:
+                        question = await conn.create_question(result['question'])
+                        for answer_title in result['incorrect_answers']:
+                            await conn.create_answer(question, answer_title, is_correct=False)
+                        await conn.create_answer(question, result['correct_answer'], is_correct=True)
 
                     await conn.create_quiz_question(quiz, question)
-
-                    for answer_title in result['incorrect_answers']:
-                        answer = await conn.create_answer(question, answer_title, is_correct=False)
-
-                    answer = await conn.create_answer(question, result['correct_answer'], is_correct=True)
-
+                    
                 for client in ws_clients:
                     await client.send_str("TO_CLIENT.GAME_STARTED")
 
@@ -135,8 +130,8 @@ async def get_categories(request):
 
 async def get_question(request):
     global previous_question_time
-    global actual_question_id
     global quiz
+    global question_count
 
     if previous_question_time != -1:
         current_question_time = datetime.now()
@@ -144,28 +139,30 @@ async def get_question(request):
         previous_question_time = current_question_time
 
         if elapsed.seconds >= 10:
-            actual_question_id += 1
+            question_count += 1
     else:
         previous_question_time = datetime.now()
-
     try:
+        question = (await conn.get_questions_for_quiz(quiz))[question_count]
+        question_count += 1
+
         incorrect_count = 0
         answers = []
-        for answer in list(await conn.get_answers_of_question(actual_question_id)):
+        for answer in list(await conn.get_answers_of_question(question.id)):
             if answer.is_correct:
                 answers.append(answer)
             else:
                 incorrect_count += 1
                 if incorrect_count < 3:
                     answers.append(answer)
-        question = await conn.get_question_by_id(actual_question_id)
+
         random.shuffle(answers)
         return web.json_response({
             "category": quiz.quiz_category,
             "question": question.title,
             "answers": [{"answer_id": answer.id, "answer": answer.title} for answer in answers]
         })
-    except tortoise.exceptions.DoesNotExist:
+    except IndexError:
         for client in ws_clients:
             # await ws.send_str("DEFEAT")
             await client.send_str("TO_CLIENT.GAME_FINISHED")
@@ -186,7 +183,6 @@ async def answer_question(request):
     if "answer_id" not in data.keys():
         return web.json_response({"error": "You need to specify an answer id"}, status=400)
 
-    print(data)
     if data["thingy_id"] not in ws_thingy:
         return web.json_response({"error": "You need to specify a correct thingy ID"}, status=400)
 
@@ -194,20 +190,21 @@ async def answer_question(request):
     answer = await conn.get_answer_by_id(data['answer_id'])
     if(user_id != -1):
         user = await conn.get_user_by_oauth_id(user_id)
-        answer_delay = (datetime.now() - previous_question_time).total_seconds()
+        answer_delay = (datetime.now() -
+                        previous_question_time).total_seconds()
         await conn.create_user_answers(user, quiz, answer, answer_delay)
 
     if answer.is_correct:
         await ws.send_str("CORRECT")
 
-        global actual_question_id
+        global question_count
 
-        actual_question_id += 1
+        question_count += 1
         try:
-            await conn.get_question_by_id(actual_question_id)
+            (await conn.get_questions_for_quiz(quiz))[question_count]
             for client in ws_clients:
                 await client.send_str("TO_CLIENT.NEXT_QUESTION")
-        except tortoise.exceptions.DoesNotExist:
+        except IndexError:
             quiz = -1
             for client in ws_clients:
                 # todo send defeat to the thingy of people that didn't win
@@ -255,24 +252,6 @@ async def websocket_handler(request):
 app.add_routes([web.get("/ws", websocket_handler)])
 
 
-async def get_user(request):
-    id = int(request.match_info['id'])
-
-    user = await conn.get_user_by_id(id)
-
-    if not user:
-        return web.json_response({'id': -1})
-    else:
-        return web.json_response(vars(user))
-
-
-async def get_user_answer(request):
-    user_id = int(request.match_info['id'])
-
-    user_answers = await conn.get_answers_of_user(user_id)
-
-    return web.json_response({"nb_answers": len(user_answers), "answers": [vars(user_answer) for user_answer in user_answers]})
-
 
 cors.add(app.router.add_get("/", home_page, name="home"))
 
@@ -299,10 +278,6 @@ cors.add(app.router.add_get(
 cors.add(app.router.add_post(
     API_PREFIX+'/games/{id:\d+}/question/', answer_question, name='answer_question'))
 
-# DB related routes
-cors.add(app.router.add_get('/users/{id:\d+}/', get_user, name='get_user'))
-cors.add(app.router.add_get(
-    '/answers/users/{id:\d+}', get_user_answer, name='get_user_answer'))
 
 
 # user-related routes

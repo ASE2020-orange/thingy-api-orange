@@ -6,40 +6,31 @@ import asyncio
 import json
 import time
 import websocket
+import websockets
+import sfx
 import gmqtt as mqtt
 from dotenv import load_dotenv
 
 # Load the .env into the environement
 load_dotenv()
 
-DEBUG = True
 SERVER_HOST = os.getenv("SERVER_HOST")
 SERVER_PORT = os.getenv("SERVER_PORT")
 SERVER_ADRESS = f"{SERVER_HOST}:{SERVER_PORT}"
 
-THINGY_ID = int(os.getenv("THINGY_ID"))
 
-
-def debug(*a, **b):
-    if DEBUG:
-        print(*a, **b)
-
-
-class Thingy:
+class ThingyLowLevel:
     # MQTT Config from the environement variable
     MQTT_HOST = os.getenv("MQTT_HOST")
     MQTT_PORT = int(os.getenv("MQTT_PORT"))
     MQTT_USER = os.getenv("MQTT_USER")
     MQTT_PWD = os.getenv("MQTT_PWD")
 
+    STOP = asyncio.Event()
 
     # Broker endpoints
     SUB_TOPIC = "things/{}/shadow/update"
     PUB_TOPIC = "things/{}/shadow/update/accepted"
-
-    STOP = asyncio.Event()
-
-    client = None
 
     # FLIP Enumeration
     FLIP_NORMAL, FLIP_SIDE, FLIP_UPSIDE_DOWN = 0, 1, 2
@@ -50,12 +41,9 @@ class Thingy:
         "UPSIDE_DOWN": FLIP_UPSIDE_DOWN
     }
 
-    def __init__(self, device):
+    def __init__(self, device, debug=False):
         self.device = device
-        # Callbacks
-        self.on_press = lambda *args: None
-        self.on_release = lambda *args: None
-        self.on_flip = lambda *args: None
+        self.debug = debug
 
     async def create_connection(self):
         self.client = mqtt.Client("")
@@ -65,20 +53,21 @@ class Thingy:
         self.client.on_disconnect = self.on_disconnect
         self.client.on_subscribe = self.on_subscribe
 
-        self.client.set_auth_credentials(Thingy.MQTT_USER, Thingy.MQTT_PWD)
+        self.client.set_auth_credentials(self.MQTT_USER, self.MQTT_PWD)
 
-        await self.client.connect(Thingy.MQTT_HOST, Thingy.MQTT_PORT)
+        await self.client.connect(self.MQTT_HOST, self.MQTT_PORT)
 
-        await Thingy.STOP.wait()
+        await self.STOP.wait()
+        self.on_close()
         await self.client.disconnect()
 
     def on_connect(self, client, flags, rc, properties):
-        debug(f"{self.device} Connected!")
-        topic = Thingy.SUB_TOPIC.format(self.device)
-        client.subscribe(topic, qos=0)
+        self.print(f"{self.device} Connected!")
+        topic = self.SUB_TOPIC.format(self.device)
+        self.client.subscribe(topic, qos=0)
 
     def on_message(self, client, topic, payload, qos, properties):
-        # debug('RECV MSG:', payload)
+        # self.print(f"RECV MSG: {payload}")
         data = json.loads(payload)
         if data["appId"] == "BUTTON":
             if data["data"] == "1":
@@ -86,19 +75,19 @@ class Thingy:
             if data["data"] == "0":
                 self.on_release()
         elif data["appId"] == "FLIP":
-            if data["data"] in Thingy._FLIP_DICT:
-                self.on_flip(Thingy._FLIP_DICT[data["data"]])
+            if data["data"] in self._FLIP_DICT:
+                self.on_flip(self._FLIP_DICT[data["data"]])
 
     def set_color(self, color):
         msg = '{"appId":"LED","data":{"color":"' + \
             color + '"},"messageType":"CFG_SET"}'
-        topic = Thingy.PUB_TOPIC.format(self.device)
+        topic = self.PUB_TOPIC.format(self.device)
         self.client.publish(topic, msg, qos=1)
 
     def _play(self, frequency):
         msg = '{"appId":"BUZZER","data":{"frequency":' + \
             str(frequency) + '},"messageType":"CFG_SET"}'
-        topic = Thingy.PUB_TOPIC.format(self.device)
+        topic = self.PUB_TOPIC.format(self.device)
         self.client.publish(topic, msg, qos=1)
 
     def play(self, frequency, t):
@@ -110,85 +99,89 @@ class Thingy:
         self._play(frequency)
 
     def on_disconnect(self, client, packet, exc=None):
-        debug(f"{self.device} Disconnected!")
+        self.print(f"{self.device} Disconnected!")
 
     def on_subscribe(self, client, mid, qos, properties):
-        debug(f"{self.device} Subscribed!")
+        self.print(f"{self.device} Subscribed!")
+
+    def print(self, *a, **b):
+        if self.debug:
+            print(*a, **b)
 
     def ask_exit(*args):
-        Thingy.STOP.set()
+        ThingyLowLevel.STOP.set()
 
 
-def send_ws(message):
-    ws = websocket.create_connection(f'ws://{SERVER_ADRESS}/ws')
-    ws.send(message)
-    ws.close()
+
+class Thingy(ThingyLowLevel):
+
+    async def ws_message(self):
+        try:
+            async with websockets.connect(self.uri) as ws:
+                await ws.send(f"THINGY_CONNECT." + self.device)
+                async for message in ws:
+                    print(message)
+                    if message == "CORRECT":
+                        self.set_color("00ff00")
+                        sfx.songs[message](self.play)
+                    if message == "INCORRECT":
+                        self.set_color("ff0000")
+                        sfx.songs[message](self.play)
+                    if message == "VICTORY":
+                        self.set_color("00ff00")
+                        sfx.songs[message](self.play)
+                    if message == "DEFEAT":
+                        self.set_color("ff0000")
+                        sfx.songs[message](self.play)
+                    self.set_color("000000")
+        except websockets.ConnectionClosedError:
+            pass
 
 
-def create_thingy(thingy_id):
-    """
-    Play music with 3 notes:
-    Each oriantation is a note :
-        - normal : c
-        - side : d
-        - upside down : e
-    """
-    # TODO: each user should have different thingy
-    thingy = Thingy(thingy_id)
+    def __init__(self, device, loop, debug=False):
+        super().__init__(device, debug)
+        self.uri = f"ws://{SERVER_ADRESS}/ws"
+        self.ws = websocket.create_connection(self.uri)
+        task = loop.create_task(self.ws_message())
 
-    # using a array to have a mutable variable int for the frequency
-    freq = [261]
-    is_pressed = [False]
+    def on_press(self):
+        print(f"{self.device} Pressed!")
+        self.ws.send(f"TO_CLIENT.BUTTON.{self.device}")
 
-    def on_press():
-        print(f"Thingy-{thingy_id}: Pressed!")
-        thingy.set_color("ffffff")
-        thingy.play_set(freq[0])
-        is_pressed[0] = True
-        send_ws("TO_CLIENT.BUTTON."+thingy_id)
+    def on_release(self):
+        print(f"{self.device} Release!")
 
-    def on_release():
-        print(f"Thingy-{thingy_id}: Release!")
-        thingy.set_color("000000")
-        thingy.play_set(0)
-        is_pressed[0] = False
+    def on_flip(self, orientation):
+        if orientation == self.FLIP_NORMAL:
+            print(f"{self.device} I'm normal")
+            self.ws.send(f"TO_CLIENT.FLIP_A.{self.device}")
+        elif orientation == self.FLIP_SIDE:
+            print(f"{self.device} I'm on the side")
+            self.ws.send(f"TO_CLIENT.FLIP_B.{self.device}")
+        elif orientation == self.FLIP_UPSIDE_DOWN:
+            print(f"{self.device} I'm upside down")
+            self.ws.send(f"TO_CLIENT.FLIP_C.{self.device}")
 
-    def on_flip(orientation):
-        if orientation == Thingy.FLIP_NORMAL:
-            print(f"Thingy-{thingy_id}: I'm normal")
-            freq[0] = 261  # c4
-            send_ws("TO_CLIENT.FLIP_A."+thingy_id)
-        elif orientation == Thingy.FLIP_SIDE:
-            print(f"Thingy-{thingy_id}: I'm on the side")
-            freq[0] = 293  # d4
-            send_ws("TO_CLIENT.FLIP_B."+thingy_id)
-        elif orientation == Thingy.FLIP_UPSIDE_DOWN:
-            print(f"Thingy-{thingy_id}: I'm upside down")
-            freq[0] = 329  # e4
-            send_ws("TO_CLIENT.FLIP_C."+thingy_id)
-
-        if is_pressed[0] is True:
-            thingy.play_set(freq[0])
-
-    thingy.on_press = on_press
-    thingy.on_release = on_release
-    thingy.on_flip = on_flip
-    return thingy
-
+    def on_close(self):
+        print(f"{self.device} close !")
+        self.ws.close()
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
 
     # Set the signal to release the connection when closing the program
-    loop.add_signal_handler(signal.SIGINT, Thingy.ask_exit)
-    loop.add_signal_handler(signal.SIGTERM, Thingy.ask_exit)
+    try:
+        loop.add_signal_handler(signal.SIGINT, Thingy.ask_exit)
+        loop.add_signal_handler(signal.SIGTERM, Thingy.ask_exit)
+    except NotImplementedError:
+        print("Couldn't initalize exit signals")
 
-    for i in range(1,4):
+    for i in range(1, 4)[::-1]:
         # Get configured thingy
-        thingy =create_thingy(f"orange-{i}")
+        thingy = Thingy(f"orange-{i}", loop, debug=True)
         # Create the connection coroutine
         connection = thingy.create_connection()
-        loop.create_task(connection)
+        task = loop.create_task(connection)
+        # break
 
-    
-    loop.run_forever()
+    loop.run_until_complete(task)

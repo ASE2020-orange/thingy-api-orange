@@ -86,6 +86,13 @@ class MysqlOrm:
     async def get_all_quizzes(self):
         return await Quizzes.all()
 
+    async def get_question_by_title(self,title):
+        try:
+            question = await Questions.filter(title=title).get()
+            return question
+        except tortoise.exceptions.DoesNotExist:
+            return None
+
 
     async def get_all_questions(self):
         return await Questions.all()
@@ -104,6 +111,13 @@ class MysqlOrm:
         except tortoise.exceptions.DoesNotExist:
             return None
 
+    #TODO: change when manyToMany relationships will be implemented
+    async def get_questions_for_quiz(self,quiz):
+        questions=[]
+        for quiz_question in await QuizQuestions.filter(quiz=quiz):
+            questions.append(await Questions.filter(id=quiz_question.question_id).get())
+        
+        return questions
 
 
     async def get_quiz_by_id(self, id):
@@ -122,7 +136,6 @@ class MysqlOrm:
         answers = []
 
         user = await self.get_user_by_id(user_id)
-        user = user[0]
 
         user_user_answers = await user.user_answers.all()
         for user_user_answer in user_user_answers:
