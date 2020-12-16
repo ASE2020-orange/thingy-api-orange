@@ -30,7 +30,7 @@ SCORE_INCORRECT = -5
 
 load_dotenv()
 
-ws_clients = []
+ws_clients = {}
 ws_thingy = {}
 
 app = web.Application()
@@ -82,8 +82,17 @@ async def create_game(request):
     global quiz
     global question_count
 
+    user_oauth = get_profile_from_request(request)
+
+    if user_oauth:
+        user_oauth_id = user_oauth.id
+    else:
+        user_oauth_id = -1
+
+    print(user_oauth)
+
     req_json = await request.json()
-    tdb_request = 'https://opentdb.com/api.php?amount=10&type=multiple'
+    tdb_request = 'https://opentdb.com/api.php?amount=20&type=multiple'
 
     async with ClientSession() as session:
         # todo : escape stuff
@@ -113,7 +122,10 @@ async def create_game(request):
 
                     await conn.add_m2m_quiz_question(quiz, question)
 
-                for client in ws_clients:
+                if user_oauth_id != -1:
+                    await conn.add_m2m_user_quiz(await conn.get_user_by_oauth_id(user_oauth_id), quiz)
+
+                for client in ws_clients.values():
                     await client.send_str("TO_CLIENT.GAME_STARTED")
 
                 return web.json_response({"game_id": quiz.id})
@@ -166,7 +178,7 @@ async def get_question(request):
         })
     # either question_count is too high for the number of question, or quiz = -1 because game is finished
     except (IndexError, AttributeError):
-        for client in ws_clients:
+        for client in ws_clients.values():
             # await ws.send_str("DEFEAT")
             await client.send_str("TO_CLIENT.GAME_FINISHED")
             quiz = -1
@@ -175,12 +187,12 @@ async def get_question(request):
 
 async def answer_question(request):
     global quiz
-    user = get_profile_from_request(request)
+    user_oauth = get_profile_from_request(request)
 
-    if user:
-        user_id = user.id
+    if user_oauth:
+        user_oauth_id = user_oauth.id
     else:
-        user_id = -1
+        user_oauth_id = -1
 
     data = await request.json()
     if "answer_id" not in data.keys():
@@ -191,14 +203,17 @@ async def answer_question(request):
 
     ws = ws_thingy[data["thingy_id"]]
     answer = await conn.get_answer_by_id(data['answer_id'])
-    if user_id != -1:
-        user = await conn.get_user_by_oauth_id(user_id)
+    if user_oauth_id != -1:
+        user = await conn.get_user_by_oauth_id(user_oauth_id)
         answer_delay = (datetime.now() -
                         previous_question_time).total_seconds()
         await conn.create_user_answers(user, quiz, answer, answer_delay)
+    
+        await conn.add_m2m_user_quiz(await conn.get_user_by_oauth_id(user_oauth_id), quiz)
+
 
     if answer.is_correct:
-        if user_id == -1:
+        if user_oauth_id == -1:
             newscore = 0
         else:
             newscore = await conn.user_add_score(user.id, SCORE_CORRECT)
@@ -209,11 +224,11 @@ async def answer_question(request):
         question_count += 1
         try:
             (await conn.get_questions_of_quiz(quiz.id))[question_count]
-            for client in ws_clients:
+            for client in ws_clients.values():
                 await client.send_str("TO_CLIENT.NEXT_QUESTION")
         except IndexError:
             quiz = -1
-            for client in ws_clients:
+            for client in ws_clients.values():
                 # todo send defeat to the thingy of people that didn't win
                 await ws.send_str("VICTORY")
                 # await ws.send_str("DEFEAT")
@@ -221,7 +236,7 @@ async def answer_question(request):
 
         return web.json_response({"correct": True, "score": newscore})
     else:
-        if user_id == -1:
+        if user_oauth_id == -1:
             newscore = 0
         else:
             newscore = await conn.user_add_score(user.id, SCORE_INCORRECT)
@@ -236,22 +251,26 @@ async def websocket_handler(request):
 
     async for msg in ws:
         if msg.type == WSMsgType.TEXT:
-            print(msg.data)
             if msg.data == "close":
                 ws_clients.remove(ws)
+                ws_thingy_key = [k for k, v in ws_thingy.items() if v == ws][0]
+                del ws_thingy[ws_thingy_key]
                 await ws.close()
             elif msg.data.startswith("TO_CLIENT"):
-                for client in ws_clients:
+                for client in ws_clients.values():
                     await client.send_str(msg.data)
-            elif msg.data == "CLIENT_CONNECT":
-                ws_clients.append(ws)
+            elif msg.data.startswith("CLIENT_CONNECT"):
+                unique_id=msg.data.split(".")[-1]
+                ws_clients[unique_id]=ws
             elif msg.data.split(".")[0] == "THINGY_CONNECT":
                 ws_thingy[int(msg.data[-1])] = ws
         elif msg.type == WSMsgType.ERROR:
-            if ws in ws_clients:
-                ws_clients.remove(ws)
-            if ws in ws_thingy:
-                ws_thingy.remove(ws)
+            if ws in ws_clients.values():
+                ws_thingy_key = [k for k, v in ws_thingy.items() if v == ws][0]
+                del ws_clients[ws_thingy_key]
+            if ws in ws_thingy.values():
+                ws_thingy_key = [k for k, v in ws_thingy.items() if v == ws][0]
+                del ws_thingy[ws_thingy_key]
             print("ws connection closed with exception %s" %
                   ws.exception())
 
@@ -261,7 +280,9 @@ async def websocket_handler(request):
 
 
 async def get_stats(request):
-    oauth_id = int(request.match_info['oauth_id'])
+    oauth_user = get_profile_from_request(request)
+
+    oauth_id = oauth_user.id
 
     mysql_orm = await MysqlOrm.get_instance()
 

@@ -67,7 +67,6 @@ class MysqlOrm:
     async def add_m2m_user_quiz(self, user, quiz):
         await user.quizzes.add(quiz)
 
-
     async def add_m2m_quiz_question(self, quiz, question):
         await quiz.questions.add(question)
 
