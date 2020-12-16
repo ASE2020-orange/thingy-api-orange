@@ -273,13 +273,21 @@ async def get_stats(request):
 
     answers = await mysql_orm.get_answers_of_user(user.id)
     nb_answers = len(answers)
-    nb_correct_answers = len([answer for answer in answers if answer.is_correct])
-    nb_wrong_answers = len([answer for answer in answers if not answer.is_correct])
-    percent_of_correct_answer = int(nb_correct_answers / nb_answers * 100)
+    nb_correct_answers = len(
+        [answer for answer in answers if answer.is_correct])
+    nb_wrong_answers = len(
+        [answer for answer in answers if not answer.is_correct])
+    if nb_answers > 0:
+        percent_of_correct_answer = int(nb_correct_answers / nb_answers * 100)
+    else:
+        percent_of_correct_answer = 0
 
     user_user_answers = await mysql_orm.get_user_user_answers(user.id)
-    avg_reaction_time = sum([user_answer.answer_delay for user_answer in
-                             user_user_answers]) / len(user_user_answers)
+    if len(user_user_answers) > 0:
+        avg_reaction_time = sum([user_answer.answer_delay for user_answer in
+                                 user_user_answers]) / len(user_user_answers)
+    else:
+        avg_reaction_time = 0
 
     return web.json_response(
         {"nb_quizzes": nb_quizzes, "nb_answers": nb_answers,
