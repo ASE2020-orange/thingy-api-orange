@@ -123,14 +123,6 @@ class MysqlOrm:
         except tortoise.exceptions.DoesNotExist:
             return None
 
-    #TODO: change when manyToMany relationships will be implemented
-    async def get_questions_for_quiz(self,quiz):
-        questions=[]
-        for quiz_question in await QuizQuestions.filter(quiz=quiz):
-            questions.append(await Questions.filter(id=quiz_question.question_id).get())
-        
-        return questions
-
     async def get_quiz_by_id(self, id):
         return await Quizzes.filter(id=id).get()
 
@@ -144,8 +136,7 @@ class MysqlOrm:
 
 
     async def get_questions_of_quiz(self, quizz_id):
-        quiz = await self.get_quiz_by_id(quiz_id)
-        quiz = quiz[0]
+        quiz = await self.get_quiz_by_id(quizz_id)
 
         questions = await quiz.questions.all()
 
@@ -164,9 +155,8 @@ class MysqlOrm:
 
     async def get_answers_of_question(self, question_id):
         question = await self.get_question_by_id(question_id)
-        question = question[0]
 
-        asnwers = await question.answers.all()
+        answers = await question.answers.all()
 
         return answers
 
@@ -176,12 +166,10 @@ async def test():
 
     user = await mysql_orm.create_user(user_oauth_token="test_auth")
     user = await mysql_orm.get_user_by_id(1)
-    user = user[0]
     print("our user : ", user)
 
     quiz = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=1)
     quiz = await mysql_orm.get_quiz_by_id(1)
-    quiz = quiz[0]
     print("our quiz linked to the user : ", quiz)
 
     await mysql_orm.create_user_quiz(user=user, quiz=quiz)
@@ -203,10 +191,8 @@ async def test2():
     mysql_orm = await MysqlOrm.get_instance()
 
     user = await mysql_orm.get_user_by_id(1)
-    user = user[0]
 
     quiz = await mysql_orm.get_quiz_by_id(1)
-    quiz = quiz[0]
 
     question = await mysql_orm.create_question(title="title")
 

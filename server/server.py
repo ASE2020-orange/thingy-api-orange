@@ -108,7 +108,7 @@ async def create_game(request):
                             await conn.create_answer(question, answer_title, is_correct=False)
                         await conn.create_answer(question, result['correct_answer'], is_correct=True)
 
-                    await conn.create_quiz_question(quiz, question)
+                    await conn.add_m2m_quiz_question(quiz, question)
                     
                 for client in ws_clients:
                     await client.send_str("TO_CLIENT.GAME_STARTED")
@@ -143,7 +143,7 @@ async def get_question(request):
     else:
         previous_question_time = datetime.now()
     try:
-        question = (await conn.get_questions_for_quiz(quiz))[question_count]
+        question = (await conn.get_questions_of_quiz(quiz.id))[question_count]
         question_count += 1
 
         incorrect_count = 0
@@ -162,7 +162,8 @@ async def get_question(request):
             "question": question.title,
             "answers": [{"answer_id": answer.id, "answer": answer.title} for answer in answers]
         })
-    except IndexError:
+    # either question_count is too high for the number of question, or quiz = -1 because game is finished
+    except (IndexError,AttributeError):
         for client in ws_clients:
             # await ws.send_str("DEFEAT")
             await client.send_str("TO_CLIENT.GAME_FINISHED")
@@ -201,7 +202,7 @@ async def answer_question(request):
 
         question_count += 1
         try:
-            (await conn.get_questions_for_quiz(quiz))[question_count]
+            (await conn.get_questions_of_quiz(quiz.id))[question_count]
             for client in ws_clients:
                 await client.send_str("TO_CLIENT.NEXT_QUESTION")
         except IndexError:
