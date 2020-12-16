@@ -73,9 +73,16 @@ class MysqlOrm:
         return question
 
 
-    async def create_user_quiz(self, user, quiz):
-        user_quiz = UserQuizzes(user=user, quiz=quiz)
-        await user_quiz.save()
+    async def add_m2m_user_quiz(self, user, quiz):
+        await user.quizzes.add(quiz)
+
+
+    async def add_m2m_user_answer(self, user, answer):
+        await user.answers.add(quiz)
+
+
+    async def add_m2m_quiz_question(self, quiz, question):
+        await quiz.questions.add(question)
 
 
     async def create_user_answers(self, user, quiz, answer, answer_delay):
@@ -109,6 +116,7 @@ class MysqlOrm:
     async def get_user_by_id(self, id):
         return await Users.filter(id=id).get()
 
+
     async def get_user_by_oauth_id(self, id):
         try:
             return await Users.filter(user_oauth_token=id).get()
@@ -123,7 +131,6 @@ class MysqlOrm:
         
         return questions
 
-
     async def get_quiz_by_id(self, id):
         return await Quizzes.filter(id=id).get()
 
@@ -136,21 +143,32 @@ class MysqlOrm:
         return await Answers.filter(id=id).get()
 
 
+    async def get_questions_of_quiz(self, quizz_id):
+        quiz = await self.get_quiz_by_id(quiz_id)
+        quiz = quiz[0]
+
+        questions = await quiz.questions.all()
+
+        return questions
+
+
     async def get_answers_of_user(self, user_id):
-        answers = []
+        # answers = []
 
         user = await self.get_user_by_id(user_id)
 
-        user_user_answers = await user.user_answers.all()
-        for user_user_answer in user_user_answers:
-            await user_user_answer.fetch_related('answer')
-            answer_of_user = user_user_answer.answer
-            answers.append(answer_of_user)
+        answers = await user.answers.all()
 
         return answers
 
+
     async def get_answers_of_question(self, question_id):
-        return await Answers.filter(question=await self.get_question_by_id(question_id))
+        question = await self.get_question_by_id(question_id)
+        question = question[0]
+
+        asnwers = await question.answers.all()
+
+        return answers
 
 
 async def test():
@@ -217,8 +235,7 @@ async def test_m2m_fields():
 
     await user1.quizzes.add(quiz1)
     await user1.quizzes.add(quiz2)
-    await quiz1.users.add(user3
-    )
+    await quiz1.users.add(user3)
 
     user1_quizzes = await user1.quizzes.all()
     print(user1_quizzes)
@@ -227,10 +244,36 @@ async def test_m2m_fields():
     print(quiz1_users)
 
 
+async def test_m2m_methods():
+    mysql_orm = await MysqlOrm.get_instance()
+
+    question1 = await mysql_orm.create_question(title="question1")
+    question2 = await mysql_orm.create_question(title="question2")
+    question3 = await mysql_orm.create_question(title="question3")
+
+    quiz1 = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=1)
+    quiz2 = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=2)
+    quiz3 = await mysql_orm.create_quiz(date=datetime.datetime.now(), difficulty=1, quiz_type="type", quiz_category=3)
+
+    quiz1_questions = await quiz1.questions.all()
+    print(quiz1_questions)
+
+    question1_quizzes = await question1.quizzes.all()
+    print(question1_quizzes)
+
+    await mysql_orm.add_m2m_quiz_question(quiz1, question1)
+
+    quiz1_questions = await quiz1.questions.all()
+    print(quiz1_questions)
+
+    question1_quizzes = await question1.quizzes.all()
+    print(question1_quizzes)
+
+
 async def populate():
     pass
 
 
 
 if __name__ == "__main__":
-    run_async(test_m2m_fields())
+    run_async(test_m2m_methods())
