@@ -92,7 +92,7 @@ async def create_game(request):
     print(user_oauth)
 
     req_json = await request.json()
-    tdb_request = 'https://opentdb.com/api.php?amount=20&type=multiple'
+    tdb_request = 'https://opentdb.com/api.php?amount=10&type=multiple'
 
     async with ClientSession() as session:
         # todo : escape stuff
@@ -252,9 +252,8 @@ async def websocket_handler(request):
     async for msg in ws:
         if msg.type == WSMsgType.TEXT:
             if msg.data == "close":
-                ws_clients.remove(ws)
-                ws_thingy_key = [k for k, v in ws_thingy.items() if v == ws][0]
-                del ws_thingy[ws_thingy_key]
+                ws_clients_key = [k for k, v in ws_clients.items() if v == ws][0]
+                del ws_clients[ws_clients_key]
                 await ws.close()
             elif msg.data.startswith("TO_CLIENT"):
                 for client in ws_clients.values():

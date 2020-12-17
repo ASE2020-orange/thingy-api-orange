@@ -160,9 +160,8 @@ class MysqlOrm:
 
     async def user_add_score(self, user_id, score):
         user = await self.get_user_by_id(user_id)
-
+        newscore = user.score + score
         user.score += score
-
         await user.save()
 
-        return score
+        return newscore
